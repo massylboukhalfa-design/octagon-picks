@@ -1,0 +1,127 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-display: 'Bebas Neue', serif;
+    --font-body: 'Barlow Condensed', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #111;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #2e2e2e;
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #d4201a;
+  }
+
+  ::selection {
+    background: #d4201a;
+    color: white;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-blood-500 text-white font-semibold tracking-wider uppercase text-sm px-6 py-3 transition-all duration-200 border border-blood-500;
+  }
+  .btn-primary:hover { @apply bg-blood-400 border-blood-300; }
+  .btn-primary:active { @apply scale-95; }
+
+  .btn-secondary {
+    @apply bg-transparent text-white font-semibold tracking-wider uppercase text-sm px-6 py-3 transition-all duration-200 border border-octagon-600;
+  }
+  .btn-secondary:hover { @apply bg-octagon-700; }
+
+  .btn-gold {
+    @apply bg-gold-500 text-octagon-950 font-bold tracking-wider uppercase text-sm px-6 py-3 transition-all duration-200;
+  }
+  .btn-gold:hover { @apply bg-gold-400; }
+  .btn-gold:active { @apply scale-95; }
+
+  .card {
+    @apply bg-octagon-800 border border-octagon-700 p-6;
+  }
+
+  .card-hover {
+    @apply bg-octagon-800 border border-octagon-700 p-6 transition-all duration-200 cursor-pointer;
+  }
+  .card-hover:hover { @apply border-blood-500 bg-octagon-700; }
+
+  .input {
+    @apply bg-octagon-700 border border-octagon-600 text-white placeholder-octagon-600 px-4 py-3 w-full transition-colors font-body text-base tracking-wide outline-none;
+  }
+  .input:focus { @apply border-blood-500; }
+
+  .label {
+    @apply text-xs uppercase tracking-[0.15em] text-octagon-600 font-semibold mb-2 block;
+  }
+
+  .section-title {
+    @apply font-display text-4xl tracking-wider text-white;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 text-xs font-mono uppercase tracking-widest px-2 py-1 border;
+  }
+
+  .badge-green {
+    @apply badge bg-emerald-950 border-emerald-700 text-emerald-400;
+  }
+
+  .badge-red {
+    @apply badge bg-red-950 border-red-800 text-red-400;
+  }
+
+  .badge-gold {
+    @apply badge bg-yellow-950 border-yellow-700 text-yellow-400;
+  }
+
+  .badge-gray {
+    @apply badge bg-octagon-700 border-octagon-600 text-octagon-600;
+  }
+
+  .divider {
+    @apply border-t border-octagon-700;
+  }
+}
+
+@layer utilities {
+  .text-gradient-blood {
+    @apply bg-gradient-to-r from-blood-300 to-blood-500 bg-clip-text text-transparent;
+  }
+
+  .text-gradient-gold {
+    @apply bg-gradient-to-r from-gold-300 to-gold-500 bg-clip-text text-transparent;
+  }
+
+  .glow-red {
+    box-shadow: 0 0 20px rgba(212, 32, 26, 0.3);
+  }
+
+  .glow-gold {
+    box-shadow: 0 0 20px rgba(201, 168, 76, 0.3);
+  }
+
+  .octagon-clip {
+    clip-path: polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%);
+  }
+
+  .animate-delay-100 { animation-delay: 100ms; }
+  .animate-delay-200 { animation-delay: 200ms; }
+  .animate-delay-300 { animation-delay: 300ms; }
+  .animate-delay-400 { animation-delay: 400ms; }
+}
