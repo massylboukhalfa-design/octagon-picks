@@ -1,12 +1,16 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { POINTS } from '@/types'
 
 export async function POST(request: Request) {
   const { eventId } = await request.json()
-  const supabase = createClient()
 
-  // Get all fights for this event with results
+  // Service role client — bypass RLS pour le calcul des points
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
   const { data: fights } = await supabase
     .from('fights')
     .select('*, fight_results(*)')
@@ -20,7 +24,6 @@ export async function POST(request: Request) {
     const result = fight.fight_results?.[0]
     if (!result) continue
 
-    // Get all predictions for this fight
     const { data: predictions } = await supabase
       .from('predictions')
       .select('*')
