@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import LogoutButton from '@/components/auth/LogoutButton'
+import NavLink from '@/components/layout/NavLink'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient()
@@ -31,7 +32,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-octagon-600 text-sm font-mono tracking-wider hidden sm:block">
+            <span className="text-white/50 text-sm font-mono tracking-wider hidden sm:block">
               {profile?.username ?? user.email}
             </span>
             <LogoutButton />
@@ -52,16 +53,5 @@ export default async function DashboardLayout({ children }: { children: React.Re
         {children}
       </main>
     </div>
-  )
-}
-
-function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
-  return (
-    <Link
-      href={href}
-      className="text-octagon-600 hover:text-white text-sm font-semibold uppercase tracking-[0.1em] px-3 py-4 border-b-2 border-transparent hover:border-blood-500 transition-all duration-200"
-    >
-      {children}
-    </Link>
   )
 }
