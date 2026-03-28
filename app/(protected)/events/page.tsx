@@ -1,213 +1,100 @@
 import { createClient } from '@/lib/supabase/server'
-import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
-import PredictionForm from '@/components/events/PredictionForm'
 
-export default async function EventDetailPage({
-  params,
-  searchParams,
-}: {
-  params: { id: string }
-  searchParams: { league?: string }
-}) {
+export default async function EventsPage() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const { data: event } = await supabase
+  const { data: events } = await supabase
     .from('ufc_events')
-    .select('*')
-    .eq('id', params.id)
+    .select('*, fights(count)')
+    .order('date', { ascending: false })
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('is_admin')
+    .eq('id', user!.id)
     .single()
 
-  if (!event) notFound()
-
-  const { data: fights } = await supabase
-    .from('fights')
-    .select('*, fight_results(*)')
-    .eq('event_id', params.id)
-    .order('is_main_event', { ascending: false })
-    .order('card_order', { ascending: false })
-
-  // User's existing predictions for this event
-  const { data: existingPredictions } = await supabase
-    .from('predictions')
-    .select('*')
-    .eq('user_id', user!.id)
-    .in('fight_id', (fights ?? []).map(f => f.id))
-    .eq('league_id', searchParams.league ?? '')
-
-  // User's leagues for the selector
-  const { data: userLeagues } = await supabase
-    .from('league_members')
-    .select('leagues(id, name)')
-    .eq('user_id', user!.id)
-
-  const isOpen = event.status === 'upcoming' && new Date() < new Date(event.prediction_deadline)
-  const isCompleted = event.status === 'completed'
-
-  const predictionMap = Object.fromEntries((existingPredictions ?? []).map(p => [p.fight_id, p]))
+  const upcoming = events?.filter(e => e.status === 'upcoming') ?? []
+  const past = events?.filter(e => e.status !== 'upcoming') ?? []
 
   return (
     <div className="space-y-8 animate-fade-in">
-      {/* Header */}
-      <div>
-        <div className="flex items-center gap-2 mb-3">
-          <Link href="/dashboard" className="text-white/40 hover:text-white text-xs uppercase tracking-widest transition-colors">Dashboard</Link>
-          <span className="text-white/20 text-xs">/</span>
-          <Link href="/events" className="text-white/40 hover:text-white text-xs uppercase tracking-widest transition-colors">Événements</Link>
-          <span className="text-white/20 text-xs">/</span>
-          <span className="text-white/60 text-xs uppercase tracking-widest truncate max-w-[200px]">{event.name}</span>
-        </div>
-        <div className="flex items-start justify-between flex-wrap gap-4">
-          <div>
-            <h1 className="font-display text-5xl tracking-wider">{event.name}</h1>
-            <p className="text-white/50 mt-2 tracking-wide">
-              {format(new Date(event.date), "d MMMM yyyy — HH'h'mm", { locale: fr })} · {event.location}
-            </p>
-          </div>
-          <div>
-            {event.status === 'upcoming' && (
-              <div className="text-right">
-                <div className="text-white/40 text-xs uppercase tracking-widest mb-1">Deadline pronostics</div>
-                <div className={`font-mono text-sm ${isOpen ? 'text-gold-400' : 'text-red-400'}`}>
-                  {format(new Date(event.prediction_deadline), "d MMM yyyy à HH'h'mm", { locale: fr })}
-                </div>
-                <div className="mt-1">
-                  {isOpen ? <span className="badge-green">Pronostics ouverts</span> : <span className="badge-red">Fermé</span>}
-                </div>
-              </div>
-            )}
-            {isCompleted && <span className="badge-gray">Événement terminé</span>}
-          </div>
-        </div>
-      </div>
-
-      {/* League selector */}
-      {isOpen && (
-        <LeagueSelector leagues={userLeagues ?? []} currentLeague={searchParams.league} eventId={params.id} />
-      )}
-
-      {/* Fights */}
-      <div className="space-y-4">
-        {fights?.map((fight: any) => (
-          <div key={fight.id} className={`card ${fight.is_main_event ? 'border-blood-500/50' : ''}`}>
-            {fight.is_main_event && (
-              <div className="badge-red mb-3 inline-flex">MAIN EVENT</div>
-            )}
-            <div className="flex items-center justify-between mb-4">
-              <div className="text-octagon-600 text-xs uppercase tracking-widest">{fight.weight_class}</div>
-              <div className="text-octagon-600 text-xs font-mono">{fight.scheduled_rounds} rounds</div>
-            </div>
-
-            {/* Fighters */}
-            <div className="grid grid-cols-3 gap-4 items-center mb-6">
-              <div className="text-left">
-                <div className="font-display text-2xl tracking-wider">{fight.fighter1_name}</div>
-                {fight.fighter1_record && (
-                  <div className="text-octagon-600 text-xs font-mono mt-1">{fight.fighter1_record}</div>
-                )}
-              </div>
-              <div className="text-center font-display text-2xl text-octagon-600">VS</div>
-              <div className="text-right">
-                <div className="font-display text-2xl tracking-wider">{fight.fighter2_name}</div>
-                {fight.fighter2_record && (
-                  <div className="text-octagon-600 text-xs font-mono mt-1">{fight.fighter2_record}</div>
-                )}
-              </div>
-            </div>
-
-            {/* Result (if completed) */}
-            {isCompleted && fight.fight_results?.[0] && (
-              <FightResultDisplay result={fight.fight_results[0]} fight={fight} />
-            )}
-
-            {/* Prediction form (if open and league selected) */}
-            {isOpen && searchParams.league && (
-              <PredictionForm
-                fight={fight}
-                leagueId={searchParams.league}
-                userId={user!.id}
-                existing={predictionMap[fight.id]}
-              />
-            )}
-
-            {/* Show existing prediction if closed */}
-            {!isOpen && predictionMap[fight.id] && (
-              <ExistingPrediction prediction={predictionMap[fight.id]} fight={fight} />
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function LeagueSelector({ leagues, currentLeague, eventId }: { leagues: any[]; currentLeague?: string; eventId: string }) {
-  if (leagues.length === 0) return (
-    <div className="card border-octagon-600">
-      <p className="text-octagon-600 text-sm">
-        Tu n'es dans aucune ligue.{' '}
-        <Link href="/leagues" className="text-blood-400 hover:text-blood-300">Rejoins une ligue</Link>
-        {' '}pour pronostiquer.
-      </p>
-    </div>
-  )
-
-  return (
-    <div className="card">
-      <label className="label">Pronostiquer pour la ligue</label>
-      <div className="flex flex-wrap gap-2">
-        {leagues.map((m: any) => (
-          <Link
-            key={m.leagues.id}
-            href={`/events/${eventId}?league=${m.leagues.id}`}
-            className={`px-4 py-2 border text-sm font-semibold uppercase tracking-wider transition-all ${
-              currentLeague === m.leagues.id
-                ? 'border-blood-500 bg-blood-500/10 text-white'
-                : 'border-octagon-600 text-octagon-600 hover:border-octagon-500 hover:text-white'
-            }`}
-          >
-            {m.leagues.name}
+      <div className="flex items-center justify-between">
+        <h1 className="font-display text-5xl tracking-wider">ÉVÉNEMENTS UFC</h1>
+        {profile?.is_admin && (
+          <Link href="/events/admin/new" className="btn-gold text-sm py-2">
+            + Créer un event
           </Link>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function FightResultDisplay({ result, fight }: { result: any; fight: any }) {
-  const winner = result.winner === 'fighter1' ? fight.fighter1_name : result.winner === 'fighter2' ? fight.fighter2_name : 'Match nul'
-  return (
-    <div className="bg-octagon-700 border border-octagon-600 p-4 mb-4">
-      <div className="text-octagon-600 text-xs uppercase tracking-widest mb-2">Résultat officiel</div>
-      <div className="flex items-center gap-3 flex-wrap">
-        <span className="font-display text-xl text-gold-400">{winner}</span>
-        <span className="badge-gray">{result.method}</span>
-        <span className="badge-gray">R{result.round}</span>
-        {result.time && <span className="text-octagon-600 text-xs font-mono">{result.time}</span>}
-      </div>
-    </div>
-  )
-}
-
-function ExistingPrediction({ prediction, fight }: { prediction: any; fight: any }) {
-  const winner = prediction.predicted_winner === 'fighter1' ? fight.fighter1_name
-    : prediction.predicted_winner === 'fighter2' ? fight.fighter2_name : 'Match nul'
-  return (
-    <div className="bg-octagon-700 border border-octagon-600 p-4">
-      <div className="text-octagon-600 text-xs uppercase tracking-widest mb-2">Ton pronostic</div>
-      <div className="flex items-center gap-3 flex-wrap">
-        <span className="font-semibold">{winner}</span>
-        <span className="badge-gray">{prediction.predicted_method}</span>
-        <span className="badge-gray">R{prediction.predicted_round}</span>
-        {prediction.points_earned !== null && (
-          <span className={`badge ${prediction.points_earned > 0 ? 'badge-gold' : 'badge-gray'}`}>
-            {prediction.points_earned} pts
-          </span>
         )}
       </div>
+
+      {upcoming.length > 0 && (
+        <div>
+          <h2 className="font-display text-2xl tracking-wider text-blood-400 mb-4">PROCHAINS ÉVÉNEMENTS</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {upcoming.map((event: any) => (
+              <EventCard key={event.id} event={event} highlight />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {past.length > 0 && (
+        <div>
+          <h2 className="font-display text-2xl tracking-wider text-octagon-600 mb-4">HISTORIQUE</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {past.map((event: any) => (
+              <EventCard key={event.id} event={event} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {(!events || events.length === 0) && (
+        <div className="text-center py-16">
+          <p className="font-display text-4xl text-octagon-700 mb-4">AUCUN ÉVÉNEMENT</p>
+          <p className="text-octagon-600 text-sm">Les événements UFC apparaîtront ici</p>
+        </div>
+      )}
     </div>
   )
+}
+
+function EventCard({ event, highlight = false }: { event: any; highlight?: boolean }) {
+  const isPast = event.status === 'completed'
+  return (
+    <Link
+      href={`/events/${event.id}`}
+      className={`card-hover group ${highlight ? 'border-blood-500/50' : ''}`}
+    >
+      <div className="flex items-start justify-between mb-3">
+        <StatusBadge status={event.status} />
+        <span className="text-octagon-600 font-mono text-xs">
+          {event.fights?.[0]?.count ?? 0} combats
+        </span>
+      </div>
+      <h3 className={`font-display text-2xl tracking-wider mb-1 group-hover:text-blood-400 transition-colors ${highlight ? 'text-white' : 'text-white'}`}>
+        {event.name}
+      </h3>
+      <p className="text-octagon-600 text-sm tracking-wide">
+        {format(new Date(event.date), 'd MMMM yyyy', { locale: fr })}
+      </p>
+      <p className="text-octagon-600 text-xs mt-1">{event.location}</p>
+      {!isPast && event.prediction_deadline && (
+        <p className="text-gold-400 text-xs mt-3 font-mono">
+          Deadline : {format(new Date(event.prediction_deadline), "d MMM HH'h'mm", { locale: fr })}
+        </p>
+      )}
+    </Link>
+  )
+}
+
+function StatusBadge({ status }: { status: string }) {
+  if (status === 'upcoming') return <span className="badge-green">À venir</span>
+  if (status === 'locked') return <span className="badge-red">Fermé</span>
+  return <span className="badge-gray">Terminé</span>
 }
