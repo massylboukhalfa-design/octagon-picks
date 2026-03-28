@@ -1,161 +1,76 @@
 import { createClient } from '@/lib/supabase/server'
-import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { format } from 'date-fns'
-import { fr } from 'date-fns/locale'
+import CreateLeagueForm from '@/components/leagues/CreateLeagueForm'
+import JoinLeagueForm from '@/components/leagues/JoinLeagueForm'
 
-export default async function LeagueDetailPage({ params }: { params: { id: string } }) {
+export default async function LeaguesPage() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const { data: league } = await supabase
-    .from('leagues')
-    .select('*')
-    .eq('id', params.id)
-    .single()
-
-  if (!league) notFound()
-
-  // Check membership
-  const { data: membership } = await supabase
+  const { data: myLeagues } = await supabase
     .from('league_members')
-    .select('id')
-    .eq('league_id', params.id)
-    .eq('user_id', user!.id)
-    .single()
-
-  if (!membership) notFound()
-
-  // Leaderboard
-  const { data: leaderboard } = await supabase
-    .from('league_leaderboard')
-    .select('*')
-    .eq('league_id', params.id)
-    .order('total_points', { ascending: false })
-
-  // Events with predictions count for this league
-  const { data: events } = await supabase
-    .from('ufc_events')
     .select(`
-      id, name, date, location, status,
-      fights(
-        id,
-        predictions(count)
+      joined_at,
+      leagues (
+        id, name, description, invite_code, owner_id,
+        league_members(count)
       )
     `)
-    .order('date', { ascending: false })
-    .limit(10)
-
-  const isOwner = league.owner_id === user!.id
+    .eq('user_id', user!.id)
+    .order('joined_at', { ascending: false })
 
   return (
     <div className="space-y-8 animate-fade-in">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <Link href="/dashboard" className="text-white/40 hover:text-white text-xs uppercase tracking-widest transition-colors">Dashboard</Link>
-            <span className="text-white/20 text-xs">/</span>
-            <Link href="/leagues" className="text-white/40 hover:text-white text-xs uppercase tracking-widest transition-colors">Ligues</Link>
-            <span className="text-white/20 text-xs">/</span>
-            <span className="text-white/60 text-xs uppercase tracking-widest">{league.name}</span>
-          </div>
-          <h1 className="font-display text-5xl tracking-wider">{league.name}</h1>
-          {league.description && (
-            <p className="text-white/50 mt-2 tracking-wide">{league.description}</p>
-          )}
-        </div>
-        <div className="text-right">
-          <div className="text-white/40 text-xs uppercase tracking-widest mb-1">Code d'invitation</div>
-          <div className="font-mono text-2xl text-gold-400 tracking-[0.3em] border border-gold-500 px-4 py-2 glow-gold">
-            {league.invite_code}
-          </div>
-        </div>
+      <div className="flex items-center justify-between">
+        <h1 className="font-display text-5xl tracking-wider">MES LIGUES</h1>
+        <span className="text-octagon-600 font-mono text-sm">{myLeagues?.length ?? 0} ligue(s)</span>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Leaderboard */}
-        <div className="lg:col-span-2 card">
-          <h2 className="font-display text-3xl tracking-wider mb-6">CLASSEMENT</h2>
-          {leaderboard && leaderboard.length > 0 ? (
-            <div className="space-y-2">
-              {leaderboard.map((entry: any, i: number) => (
-                <div
-                  key={entry.user_id}
-                  className={`flex items-center gap-4 p-4 border ${
-                    i === 0 ? 'border-gold-500 bg-yellow-950/20' :
-                    i === 1 ? 'border-octagon-500 bg-octagon-700' :
-                    i === 2 ? 'border-octagon-600 bg-octagon-700' :
-                    'border-octagon-700 bg-octagon-800'
-                  } ${entry.user_id === user!.id ? 'border-l-2 border-l-blood-500' : ''}`}
-                >
-                  <div className={`font-display text-2xl w-8 text-center ${
-                    i === 0 ? 'text-gold-400' : i === 1 ? 'text-gray-400' : i === 2 ? 'text-amber-700' : 'text-octagon-600'
-                  }`}>
-                    {i + 1}
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-semibold tracking-wide flex items-center gap-2">
-                      {entry.username}
-                      {entry.user_id === user!.id && <span className="badge-red text-xs">Toi</span>}
-                    </div>
-                    <div className="flex gap-3 mt-1">
-                      <span className="text-octagon-600 text-xs">✓ {entry.correct_winner} gagnants</span>
-                      <span className="text-octagon-600 text-xs">🎯 {entry.perfect_picks} parfaits</span>
-                    </div>
-                  </div>
-                  <div className={`font-display text-3xl ${i === 0 ? 'text-gold-400' : 'text-white'}`}>
-                    {entry.total_points}
-                    <span className="text-sm text-octagon-600 ml-1 font-body">pts</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-octagon-600 text-center py-8">Aucun pronostic encore posé dans cette ligue</p>
-          )}
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <CreateLeagueForm userId={user!.id} />
+        <JoinLeagueForm userId={user!.id} />
+      </div>
 
-        {/* Events history */}
-        <div className="card">
-          <h2 className="font-display text-2xl tracking-wider mb-5">ÉVÉNEMENTS</h2>
-          <div className="space-y-3">
-            {events?.map((event: any) => (
+      <div className="divider" />
+
+      {myLeagues && myLeagues.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {myLeagues.map((m: any) => {
+            const league = m.leagues
+            const isOwner = league.owner_id === user!.id
+            return (
               <Link
-                key={event.id}
-                href={`/events/${event.id}?league=${params.id}`}
-                className="block p-3 bg-octagon-700 hover:bg-octagon-600 border border-octagon-600 hover:border-blood-500 transition-all"
+                key={league.id}
+                href={`/leagues/${league.id}`}
+                className="card-hover group"
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <div className="font-semibold text-sm tracking-wide">{event.name}</div>
-                    <div className="text-octagon-600 text-xs mt-0.5">
-                      {format(new Date(event.date), 'd MMM yyyy', { locale: fr })}
-                    </div>
-                  </div>
-                  <StatusBadge status={event.status} />
+                <div className="flex items-start justify-between mb-3">
+                  <h3 className="font-display text-2xl tracking-wider group-hover:text-blood-400 transition-colors">
+                    {league.name}
+                  </h3>
+                  {isOwner && <span className="badge-gold text-xs">ADMIN</span>}
+                </div>
+                {league.description && (
+                  <p className="text-octagon-600 text-sm mb-3 tracking-wide">{league.description}</p>
+                )}
+                <div className="flex items-center justify-between mt-4">
+                  <span className="text-octagon-600 text-xs font-mono">
+                    {league.league_members?.[0]?.count ?? 0} membre(s)
+                  </span>
+                  <span className="text-octagon-600 font-mono text-xs tracking-widest border border-octagon-600 px-2 py-0.5">
+                    #{league.invite_code}
+                  </span>
                 </div>
               </Link>
-            ))}
-          </div>
+            )
+          })}
         </div>
-      </div>
-
-      {/* Admin section */}
-      {isOwner && (
-        <div className="card border-gold-500/30">
-          <h2 className="font-display text-2xl tracking-wider mb-4 text-gold-400">ADMINISTRATION</h2>
-          <p className="text-octagon-600 text-sm tracking-wide">
-            Tu es le créateur de cette ligue. Tu peux gérer les événements et les résultats depuis la page Événements.
-          </p>
+      ) : (
+        <div className="text-center py-16">
+          <p className="font-display text-4xl text-octagon-700 mb-4">AUCUNE LIGUE</p>
+          <p className="text-octagon-600 text-sm tracking-wide">Crée ou rejoins une ligue pour commencer à pronostiquer</p>
         </div>
       )}
     </div>
   )
-}
-
-function StatusBadge({ status }: { status: string }) {
-  if (status === 'upcoming') return <span className="badge-green">À venir</span>
-  if (status === 'locked') return <span className="badge-red">Fermé</span>
-  return <span className="badge-gray">Terminé</span>
 }
