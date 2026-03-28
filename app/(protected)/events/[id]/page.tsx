@@ -7,10 +7,8 @@ import PredictionForm from '@/components/events/PredictionForm'
 
 export default async function EventDetailPage({
   params,
-  searchParams,
 }: {
   params: { id: string }
-  searchParams: { league?: string }
 }) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -30,43 +28,53 @@ export default async function EventDetailPage({
     .order('is_main_event', { ascending: false })
     .order('card_order', { ascending: false })
 
-  // User's existing predictions for this event
+  // Pronostics existants de l'utilisateur pour cet event
   const { data: existingPredictions } = await supabase
     .from('predictions')
     .select('*')
     .eq('user_id', user!.id)
     .in('fight_id', (fights ?? []).map(f => f.id))
-    .eq('league_id', searchParams.league ?? '')
 
-  // User's leagues for the selector
-  const { data: userLeagues } = await supabase
+  // Ligues de l'utilisateur
+  const { data: userLeaguesRaw } = await supabase
     .from('league_members')
     .select('leagues(id, name)')
     .eq('user_id', user!.id)
 
+  const userLeagues = (userLeaguesRaw ?? [])
+    .map((m: any) => m.leagues)
+    .filter(Boolean)
+
   const isOpen = event.status === 'upcoming' && new Date() < new Date(event.prediction_deadline)
   const isCompleted = event.status === 'completed'
 
-  const predictionMap = Object.fromEntries((existingPredictions ?? []).map(p => [p.fight_id, p]))
+  // On prend le premier prono par fight_id (un seul prono par combat maintenant)
+  const predictionMap = Object.fromEntries(
+    (existingPredictions ?? []).map(p => [p.fight_id, p])
+  )
 
   return (
     <div className="space-y-8 animate-fade-in">
       {/* Header */}
       <div>
-        <Link href="/events" className="text-octagon-600 text-xs uppercase tracking-widest hover:text-white transition-colors mb-3 block">
-          ← Événements
-        </Link>
+        <div className="flex items-center gap-2 mb-3">
+          <Link href="/dashboard" className="text-white/40 hover:text-white text-xs uppercase tracking-widest transition-colors">Dashboard</Link>
+          <span className="text-white/20 text-xs">/</span>
+          <Link href="/events" className="text-white/40 hover:text-white text-xs uppercase tracking-widest transition-colors">Événements</Link>
+          <span className="text-white/20 text-xs">/</span>
+          <span className="text-white/60 text-xs uppercase tracking-widest truncate max-w-[200px]">{event.name}</span>
+        </div>
         <div className="flex items-start justify-between flex-wrap gap-4">
           <div>
             <h1 className="font-display text-5xl tracking-wider">{event.name}</h1>
-            <p className="text-octagon-600 mt-2 tracking-wide">
+            <p className="text-white/50 mt-2 tracking-wide">
               {format(new Date(event.date), "d MMMM yyyy — HH'h'mm", { locale: fr })} · {event.location}
             </p>
           </div>
           <div>
             {event.status === 'upcoming' && (
               <div className="text-right">
-                <div className="text-octagon-600 text-xs uppercase tracking-widest mb-1">Deadline pronostics</div>
+                <div className="text-white/40 text-xs uppercase tracking-widest mb-1">Deadline pronostics</div>
                 <div className={`font-mono text-sm ${isOpen ? 'text-gold-400' : 'text-red-400'}`}>
                   {format(new Date(event.prediction_deadline), "d MMM yyyy à HH'h'mm", { locale: fr })}
                 </div>
@@ -80,9 +88,26 @@ export default async function EventDetailPage({
         </div>
       </div>
 
-      {/* League selector */}
-      {isOpen && (
-        <LeagueSelector leagues={userLeagues ?? []} currentLeague={searchParams.league} eventId={params.id} />
+      {/* Info ligues si ouvert */}
+      {isOpen && userLeagues.length > 0 && (
+        <div className="card border-octagon-600">
+          <p className="text-white/50 text-sm tracking-wide">
+            Ton pronostic sera automatiquement enregistré dans{' '}
+            <span className="text-white font-semibold">{userLeagues.length} ligue{userLeagues.length > 1 ? 's' : ''}</span>
+            {' '}:{' '}
+            {userLeagues.map((l: any) => l.name).join(', ')}
+          </p>
+        </div>
+      )}
+
+      {isOpen && userLeagues.length === 0 && (
+        <div className="card border-octagon-600">
+          <p className="text-white/50 text-sm tracking-wide">
+            Tu n'es dans aucune ligue.{' '}
+            <Link href="/leagues" className="text-blood-400 hover:text-blood-300">Rejoins une ligue</Link>
+            {' '}pour que ton score soit comptabilisé.
+          </p>
+        </div>
       )}
 
       {/* Fights */}
@@ -93,8 +118,8 @@ export default async function EventDetailPage({
               <div className="badge-red mb-3 inline-flex">MAIN EVENT</div>
             )}
             <div className="flex items-center justify-between mb-4">
-              <div className="text-octagon-600 text-xs uppercase tracking-widest">{fight.weight_class}</div>
-              <div className="text-octagon-600 text-xs font-mono">{fight.scheduled_rounds} rounds</div>
+              <div className="text-white/40 text-xs uppercase tracking-widest">{fight.weight_class}</div>
+              <div className="text-white/40 text-xs font-mono">{fight.scheduled_rounds} rounds</div>
             </div>
 
             {/* Fighters */}
@@ -102,34 +127,34 @@ export default async function EventDetailPage({
               <div className="text-left">
                 <div className="font-display text-2xl tracking-wider">{fight.fighter1_name}</div>
                 {fight.fighter1_record && (
-                  <div className="text-octagon-600 text-xs font-mono mt-1">{fight.fighter1_record}</div>
+                  <div className="text-white/40 text-xs font-mono mt-1">{fight.fighter1_record}</div>
                 )}
               </div>
-              <div className="text-center font-display text-2xl text-octagon-600">VS</div>
+              <div className="text-center font-display text-2xl text-white/30">VS</div>
               <div className="text-right">
                 <div className="font-display text-2xl tracking-wider">{fight.fighter2_name}</div>
                 {fight.fighter2_record && (
-                  <div className="text-octagon-600 text-xs font-mono mt-1">{fight.fighter2_record}</div>
+                  <div className="text-white/40 text-xs font-mono mt-1">{fight.fighter2_record}</div>
                 )}
               </div>
             </div>
 
-            {/* Result (if completed) */}
+            {/* Résultat officiel */}
             {isCompleted && fight.fight_results?.[0] && (
               <FightResultDisplay result={fight.fight_results[0]} fight={fight} />
             )}
 
-            {/* Prediction form (if open and league selected) */}
-            {isOpen && searchParams.league && (
+            {/* Formulaire de pronostic */}
+            {isOpen && (
               <PredictionForm
                 fight={fight}
-                leagueId={searchParams.league}
                 userId={user!.id}
+                userLeagues={userLeagues}
                 existing={predictionMap[fight.id]}
               />
             )}
 
-            {/* Show existing prediction if closed */}
+            {/* Pronostic existant si fermé */}
             {!isOpen && predictionMap[fight.id] && (
               <ExistingPrediction prediction={predictionMap[fight.id]} fight={fight} />
             )}
@@ -140,49 +165,17 @@ export default async function EventDetailPage({
   )
 }
 
-function LeagueSelector({ leagues, currentLeague, eventId }: { leagues: any[]; currentLeague?: string; eventId: string }) {
-  if (leagues.length === 0) return (
-    <div className="card border-octagon-600">
-      <p className="text-octagon-600 text-sm">
-        Tu n'es dans aucune ligue.{' '}
-        <Link href="/leagues" className="text-blood-400 hover:text-blood-300">Rejoins une ligue</Link>
-        {' '}pour pronostiquer.
-      </p>
-    </div>
-  )
-
-  return (
-    <div className="card">
-      <label className="label">Pronostiquer pour la ligue</label>
-      <div className="flex flex-wrap gap-2">
-        {leagues.map((m: any) => (
-          <Link
-            key={m.leagues.id}
-            href={`/events/${eventId}?league=${m.leagues.id}`}
-            className={`px-4 py-2 border text-sm font-semibold uppercase tracking-wider transition-all ${
-              currentLeague === m.leagues.id
-                ? 'border-blood-500 bg-blood-500/10 text-white'
-                : 'border-octagon-600 text-octagon-600 hover:border-octagon-500 hover:text-white'
-            }`}
-          >
-            {m.leagues.name}
-          </Link>
-        ))}
-      </div>
-    </div>
-  )
-}
-
 function FightResultDisplay({ result, fight }: { result: any; fight: any }) {
-  const winner = result.winner === 'fighter1' ? fight.fighter1_name : result.winner === 'fighter2' ? fight.fighter2_name : 'Match nul'
+  const winner = result.winner === 'fighter1' ? fight.fighter1_name
+    : result.winner === 'fighter2' ? fight.fighter2_name : 'Match nul'
   return (
     <div className="bg-octagon-700 border border-octagon-600 p-4 mb-4">
-      <div className="text-octagon-600 text-xs uppercase tracking-widest mb-2">Résultat officiel</div>
+      <div className="text-white/40 text-xs uppercase tracking-widest mb-2">Résultat officiel</div>
       <div className="flex items-center gap-3 flex-wrap">
         <span className="font-display text-xl text-gold-400">{winner}</span>
         <span className="badge-gray">{result.method}</span>
         <span className="badge-gray">R{result.round}</span>
-        {result.time && <span className="text-octagon-600 text-xs font-mono">{result.time}</span>}
+        {result.time && <span className="text-white/40 text-xs font-mono">{result.time}</span>}
       </div>
     </div>
   )
@@ -193,7 +186,7 @@ function ExistingPrediction({ prediction, fight }: { prediction: any; fight: any
     : prediction.predicted_winner === 'fighter2' ? fight.fighter2_name : 'Match nul'
   return (
     <div className="bg-octagon-700 border border-octagon-600 p-4">
-      <div className="text-octagon-600 text-xs uppercase tracking-widest mb-2">Ton pronostic</div>
+      <div className="text-white/40 text-xs uppercase tracking-widest mb-2">Ton pronostic</div>
       <div className="flex items-center gap-3 flex-wrap">
         <span className="font-semibold">{winner}</span>
         <span className="badge-gray">{prediction.predicted_method}</span>

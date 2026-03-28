@@ -6,14 +6,14 @@ import { FIGHT_METHODS, FightMethod } from '@/types'
 
 type Props = {
   fight: any
-  leagueId: string
   userId: string
+  userLeagues: { id: string; name: string }[]
   existing?: any
 }
 
-export default function PredictionForm({ fight, leagueId, userId, existing }: Props) {
-  const [winner, setWinner] = useState<'fighter1' | 'fighter2' | 'draw'>(existing?.predicted_winner ?? '')
-  const [method, setMethod] = useState<FightMethod>(existing?.predicted_method ?? '')
+export default function PredictionForm({ fight, userId, userLeagues, existing }: Props) {
+  const [winner, setWinner] = useState<'fighter1' | 'fighter2' | 'draw' | ''>(existing?.predicted_winner ?? '')
+  const [method, setMethod] = useState<FightMethod | ''>(existing?.predicted_method ?? '')
   const [round, setRound] = useState<number>(existing?.predicted_round ?? 0)
   const [loading, setLoading] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -29,21 +29,66 @@ export default function PredictionForm({ fight, leagueId, userId, existing }: Pr
     setLoading(true)
     setError('')
     setSaved(false)
+
     const supabase = createClient()
 
-    const payload = {
-      user_id: userId,
-      fight_id: fight.id,
-      league_id: leagueId,
-      predicted_winner: winner,
-      predicted_method: method,
-      predicted_round: round,
-    }
-
     if (existing) {
-      await supabase.from('predictions').update(payload).eq('id', existing.id)
+      // Mettre à jour le prono existant
+      const { error: updateErr } = await supabase
+        .from('predictions')
+        .update({
+          predicted_winner: winner,
+          predicted_method: method,
+          predicted_round: round,
+        })
+        .eq('id', existing.id)
+
+      if (updateErr) {
+        setError('Erreur lors de la mise à jour')
+        setLoading(false)
+        return
+      }
     } else {
-      await supabase.from('predictions').insert(payload)
+      // Insérer un prono pour chaque ligue de l'utilisateur
+      if (userLeagues.length === 0) {
+        // Pas de ligue — insérer sans league_id
+        const { error: insertErr } = await supabase
+          .from('predictions')
+          .insert({
+            user_id: userId,
+            fight_id: fight.id,
+            league_id: null,
+            predicted_winner: winner,
+            predicted_method: method,
+            predicted_round: round,
+          })
+
+        if (insertErr) {
+          setError('Erreur lors de l\'enregistrement')
+          setLoading(false)
+          return
+        }
+      } else {
+        // Insérer un prono par ligue
+        const inserts = userLeagues.map(league => ({
+          user_id: userId,
+          fight_id: fight.id,
+          league_id: league.id,
+          predicted_winner: winner,
+          predicted_method: method,
+          predicted_round: round,
+        }))
+
+        const { error: insertErr } = await supabase
+          .from('predictions')
+          .insert(inserts)
+
+        if (insertErr) {
+          setError('Erreur lors de l\'enregistrement')
+          setLoading(false)
+          return
+        }
+      }
     }
 
     setSaved(true)
@@ -53,8 +98,15 @@ export default function PredictionForm({ fight, leagueId, userId, existing }: Pr
 
   return (
     <div className="border-t border-octagon-700 pt-4 mt-2">
-      <div className="text-xs uppercase tracking-widest text-octagon-600 mb-4">
-        {existing ? 'Modifier ton pronostic' : 'Ton pronostic'}
+      <div className="flex items-center justify-between mb-4">
+        <div className="text-xs uppercase tracking-widest text-white/40">
+          {existing ? 'Modifier ton pronostic' : 'Ton pronostic'}
+        </div>
+        {userLeagues.length > 0 && !existing && (
+          <div className="text-xs text-white/30">
+            Valable dans {userLeagues.length} ligue{userLeagues.length > 1 ? 's' : ''}
+          </div>
+        )}
       </div>
 
       {/* Winner */}
@@ -72,7 +124,7 @@ export default function PredictionForm({ fight, leagueId, userId, existing }: Pr
               className={`py-2 px-3 border text-sm font-semibold tracking-wide transition-all text-center ${
                 winner === opt.value
                   ? 'border-blood-500 bg-blood-500/10 text-white'
-                  : 'border-octagon-600 text-octagon-600 hover:border-octagon-500 hover:text-white'
+                  : 'border-octagon-600 text-white/40 hover:border-octagon-500 hover:text-white'
               }`}
             >
               {opt.label}
@@ -92,7 +144,7 @@ export default function PredictionForm({ fight, leagueId, userId, existing }: Pr
               className={`py-1.5 px-3 border text-sm font-mono tracking-wider transition-all ${
                 method === m
                   ? 'border-gold-500 bg-yellow-950/30 text-gold-400'
-                  : 'border-octagon-600 text-octagon-600 hover:border-octagon-500 hover:text-white'
+                  : 'border-octagon-600 text-white/40 hover:border-octagon-500 hover:text-white'
               }`}
             >
               {m}
@@ -112,7 +164,7 @@ export default function PredictionForm({ fight, leagueId, userId, existing }: Pr
               className={`w-10 h-10 border font-display text-xl tracking-wide transition-all ${
                 round === r
                   ? 'border-blood-500 bg-blood-500/10 text-white'
-                  : 'border-octagon-600 text-octagon-600 hover:border-octagon-500 hover:text-white'
+                  : 'border-octagon-600 text-white/40 hover:border-octagon-500 hover:text-white'
               }`}
             >
               {r}

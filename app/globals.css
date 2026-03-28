@@ -67,7 +67,7 @@
   .input:focus { @apply border-blood-500; }
 
   .label {
-    @apply text-xs uppercase tracking-[0.15em] text-octagon-600 font-semibold mb-2 block;
+    @apply text-xs uppercase tracking-[0.15em] text-white/50 font-semibold mb-2 block;
   }
 
   .section-title {
@@ -91,7 +91,7 @@
   }
 
   .badge-gray {
-    @apply badge bg-octagon-700 border-octagon-600 text-octagon-600;
+    @apply badge bg-octagon-700 border-octagon-600 text-white/50;
   }
 
   .divider {
