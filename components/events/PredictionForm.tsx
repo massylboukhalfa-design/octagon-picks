@@ -20,12 +20,19 @@ export default function PredictionForm({ fight, userId, userLeagues, existing }:
   const [error, setError] = useState('')
 
   const isDecision = method === 'Decision'
+  const isDraw = winner === 'draw'
+  const isAutoRound = isDecision || isDraw
   const rounds = Array.from({ length: fight.scheduled_rounds }, (_, i) => i + 1)
-  const effectiveRound = isDecision ? fight.scheduled_rounds : round
+  const effectiveRound = isAutoRound ? fight.scheduled_rounds : round
 
   const handleMethodChange = (m: FightMethod) => {
     setMethod(m)
     if (m === 'Decision') setRound(0)
+  }
+
+  const handleWinnerChange = (w: 'fighter1' | 'fighter2' | 'draw') => {
+    setWinner(w)
+    if (w === 'draw') setRound(0)
   }
 
   const handleSave = async () => {
@@ -33,7 +40,7 @@ export default function PredictionForm({ fight, userId, userLeagues, existing }:
       setError('Complète tous les champs')
       return
     }
-    if (!isDecision && !round) {
+    if (!isAutoRound && !round) {
       setError('Choisis un round')
       return
     }
@@ -124,7 +131,7 @@ export default function PredictionForm({ fight, userId, userLeagues, existing }:
           ] as const).map(opt => (
             <button
               key={opt.value}
-              onClick={() => setWinner(opt.value)}
+              onClick={() => handleWinnerChange(opt.value)}
               className={`py-2 px-3 border text-sm font-semibold tracking-wide transition-all text-center ${
                 winner === opt.value
                   ? 'border-blood-500 bg-blood-500/10 text-white'
@@ -157,8 +164,8 @@ export default function PredictionForm({ fight, userId, userLeagues, existing }:
         </div>
       </div>
 
-      {/* Round — masqué si Decision */}
-      {!isDecision ? (
+      {/* Round — masqué si Decision ou Match nul */}
+      {!isAutoRound ? (
         <div className="mb-5">
           <label className="label">Round</label>
           <div className="flex gap-2">
@@ -180,7 +187,10 @@ export default function PredictionForm({ fight, userId, userLeagues, existing }:
       ) : (
         <div className="mb-5 px-3 py-2 bg-octagon-700 border border-octagon-600 inline-flex items-center gap-2">
           <span className="text-white/40 text-xs uppercase tracking-widest">Round</span>
-          <span className="text-white/60 text-sm font-mono">R{fight.scheduled_rounds} — automatique</span>
+          <span className="text-white/60 text-sm font-mono">
+            R{fight.scheduled_rounds} — automatique
+            {isDraw ? ' (match nul)' : ' (décision)'}
+          </span>
         </div>
       )}
 
