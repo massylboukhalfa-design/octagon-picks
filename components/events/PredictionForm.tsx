@@ -19,28 +19,42 @@ export default function PredictionForm({ fight, userId, userLeagues, existing }:
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
 
+  const isDecision = method === 'Decision'
   const rounds = Array.from({ length: fight.scheduled_rounds }, (_, i) => i + 1)
+  const effectiveRound = isDecision ? fight.scheduled_rounds : round
+
+  const handleMethodChange = (m: FightMethod) => {
+    setMethod(m)
+    if (m === 'Decision') setRound(0)
+  }
 
   const handleSave = async () => {
-    if (!winner || !method || !round) {
+    if (!winner || !method) {
       setError('Complète tous les champs')
       return
     }
+    if (!isDecision && !round) {
+      setError('Choisis un round')
+      return
+    }
+
     setLoading(true)
     setError('')
     setSaved(false)
 
     const supabase = createClient()
 
+    const predictionData = {
+      predicted_winner: winner,
+      predicted_method: method,
+      predicted_round: effectiveRound,
+    }
+
     if (existing) {
-      // Mettre à jour le prono existant
+      // Mise à jour du prono existant — les league_predictions restent inchangées
       const { error: updateErr } = await supabase
         .from('predictions')
-        .update({
-          predicted_winner: winner,
-          predicted_method: method,
-          predicted_round: round,
-        })
+        .update(predictionData)
         .eq('id', existing.id)
 
       if (updateErr) {
@@ -49,42 +63,32 @@ export default function PredictionForm({ fight, userId, userLeagues, existing }:
         return
       }
     } else {
-      // Insérer un prono pour chaque ligue de l'utilisateur
-      if (userLeagues.length === 0) {
-        // Pas de ligue — insérer sans league_id
-        const { error: insertErr } = await supabase
-          .from('predictions')
-          .insert({
-            user_id: userId,
-            fight_id: fight.id,
-            league_id: null,
-            predicted_winner: winner,
-            predicted_method: method,
-            predicted_round: round,
-          })
+      // 1. Insérer le prono unique
+      const { data: pred, error: insertErr } = await supabase
+        .from('predictions')
+        .insert({ user_id: userId, fight_id: fight.id, ...predictionData })
+        .select()
+        .single()
 
-        if (insertErr) {
-          setError('Erreur lors de l\'enregistrement')
-          setLoading(false)
-          return
-        }
-      } else {
-        // Insérer un prono par ligue
-        const inserts = userLeagues.map(league => ({
-          user_id: userId,
-          fight_id: fight.id,
+      if (insertErr || !pred) {
+        setError('Erreur lors de l\'enregistrement')
+        setLoading(false)
+        return
+      }
+
+      // 2. Associer le prono à toutes les ligues de l'utilisateur
+      if (userLeagues.length > 0) {
+        const leagueLinks = userLeagues.map(league => ({
+          prediction_id: pred.id,
           league_id: league.id,
-          predicted_winner: winner,
-          predicted_method: method,
-          predicted_round: round,
         }))
 
-        const { error: insertErr } = await supabase
-          .from('predictions')
-          .insert(inserts)
+        const { error: linkErr } = await supabase
+          .from('league_predictions')
+          .insert(leagueLinks)
 
-        if (insertErr) {
-          setError('Erreur lors de l\'enregistrement')
+        if (linkErr) {
+          setError('Prono enregistré mais erreur de liaison aux ligues')
           setLoading(false)
           return
         }
@@ -140,7 +144,7 @@ export default function PredictionForm({ fight, userId, userLeagues, existing }:
           {FIGHT_METHODS.map(m => (
             <button
               key={m}
-              onClick={() => setMethod(m)}
+              onClick={() => handleMethodChange(m)}
               className={`py-1.5 px-3 border text-sm font-mono tracking-wider transition-all ${
                 method === m
                   ? 'border-gold-500 bg-yellow-950/30 text-gold-400'
@@ -153,25 +157,32 @@ export default function PredictionForm({ fight, userId, userLeagues, existing }:
         </div>
       </div>
 
-      {/* Round */}
-      <div className="mb-5">
-        <label className="label">Round</label>
-        <div className="flex gap-2">
-          {rounds.map(r => (
-            <button
-              key={r}
-              onClick={() => setRound(r)}
-              className={`w-10 h-10 border font-display text-xl tracking-wide transition-all ${
-                round === r
-                  ? 'border-blood-500 bg-blood-500/10 text-white'
-                  : 'border-octagon-600 text-white/40 hover:border-octagon-500 hover:text-white'
-              }`}
-            >
-              {r}
-            </button>
-          ))}
+      {/* Round — masqué si Decision */}
+      {!isDecision ? (
+        <div className="mb-5">
+          <label className="label">Round</label>
+          <div className="flex gap-2">
+            {rounds.map(r => (
+              <button
+                key={r}
+                onClick={() => setRound(r)}
+                className={`w-10 h-10 border font-display text-xl tracking-wide transition-all ${
+                  round === r
+                    ? 'border-blood-500 bg-blood-500/10 text-white'
+                    : 'border-octagon-600 text-white/40 hover:border-octagon-500 hover:text-white'
+                }`}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="mb-5 px-3 py-2 bg-octagon-700 border border-octagon-600 inline-flex items-center gap-2">
+          <span className="text-white/40 text-xs uppercase tracking-widest">Round</span>
+          <span className="text-white/60 text-sm font-mono">R{fight.scheduled_rounds} — automatique</span>
+        </div>
+      )}
 
       {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
 
