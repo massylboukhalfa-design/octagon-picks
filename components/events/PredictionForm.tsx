@@ -32,7 +32,10 @@ export default function PredictionForm({ fight, userId, userLeagues, existing }:
 
   const handleWinnerChange = (w: 'fighter1' | 'fighter2' | 'draw') => {
     setWinner(w)
-    if (w === 'draw') setRound(0)
+    if (w === 'draw') {
+      setMethod('Decision')
+      setRound(0)
+    }
   }
 
   const handleSave = async () => {
