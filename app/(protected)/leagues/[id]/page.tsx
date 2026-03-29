@@ -53,16 +53,20 @@ export default async function LeagueDetailPage({ params }: { params: { id: strin
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <Link href="/leagues" className="text-octagon-600 text-xs uppercase tracking-widest hover:text-white transition-colors mb-3 block">
-            ← Ligues
-          </Link>
+          <div className="flex items-center gap-2 mb-3">
+            <Link href="/dashboard" className="text-white/40 hover:text-white text-xs uppercase tracking-widest transition-colors">Dashboard</Link>
+            <span className="text-white/20 text-xs">/</span>
+            <Link href="/leagues" className="text-white/40 hover:text-white text-xs uppercase tracking-widest transition-colors">Ligues</Link>
+            <span className="text-white/20 text-xs">/</span>
+            <span className="text-white/60 text-xs uppercase tracking-widest">{league.name}</span>
+          </div>
           <h1 className="font-display text-5xl tracking-wider">{league.name}</h1>
           {league.description && (
-            <p className="text-octagon-600 mt-2 tracking-wide">{league.description}</p>
+            <p className="text-white/50 mt-2 tracking-wide">{league.description}</p>
           )}
         </div>
         <div className="text-right">
-          <div className="text-octagon-600 text-xs uppercase tracking-widest mb-1">Code d'invitation</div>
+          <div className="text-white/40 text-xs uppercase tracking-widest mb-1">Code d'invitation</div>
           <div className="font-mono text-2xl text-gold-400 tracking-[0.3em] border border-gold-500 px-4 py-2 glow-gold">
             {league.invite_code}
           </div>
@@ -76,17 +80,18 @@ export default async function LeagueDetailPage({ params }: { params: { id: strin
           {leaderboard && leaderboard.length > 0 ? (
             <div className="space-y-2">
               {leaderboard.map((entry: any, i: number) => (
-                <div
+                <Link
                   key={entry.user_id}
-                  className={`flex items-center gap-4 p-4 border ${
-                    i === 0 ? 'border-gold-500 bg-yellow-950/20' :
-                    i === 1 ? 'border-octagon-500 bg-octagon-700' :
-                    i === 2 ? 'border-octagon-600 bg-octagon-700' :
-                    'border-octagon-700 bg-octagon-800'
+                  href={`/profil/${entry.user_id}`}
+                  className={`flex items-center gap-4 p-4 border transition-all ${
+                    i === 0 ? 'border-gold-500 bg-yellow-950/20 hover:bg-yellow-950/30' :
+                    i === 1 ? 'border-octagon-500 bg-octagon-700 hover:bg-octagon-600' :
+                    i === 2 ? 'border-octagon-600 bg-octagon-700 hover:bg-octagon-600' :
+                    'border-octagon-700 bg-octagon-800 hover:bg-octagon-700'
                   } ${entry.user_id === user!.id ? 'border-l-2 border-l-blood-500' : ''}`}
                 >
                   <div className={`font-display text-2xl w-8 text-center ${
-                    i === 0 ? 'text-gold-400' : i === 1 ? 'text-gray-400' : i === 2 ? 'text-amber-700' : 'text-octagon-600'
+                    i === 0 ? 'text-gold-400' : i === 1 ? 'text-gray-400' : i === 2 ? 'text-amber-700' : 'text-white/40'
                   }`}>
                     {i + 1}
                   </div>
@@ -96,19 +101,19 @@ export default async function LeagueDetailPage({ params }: { params: { id: strin
                       {entry.user_id === user!.id && <span className="badge-red text-xs">Toi</span>}
                     </div>
                     <div className="flex gap-3 mt-1">
-                      <span className="text-octagon-600 text-xs">✓ {entry.correct_winner} gagnants</span>
-                      <span className="text-octagon-600 text-xs">🎯 {entry.perfect_picks} parfaits</span>
+                      <span className="text-white/40 text-xs">✓ {entry.correct_winner} gagnants</span>
+                      <span className="text-white/40 text-xs">🎯 {entry.perfect_picks} parfaits</span>
                     </div>
                   </div>
                   <div className={`font-display text-3xl ${i === 0 ? 'text-gold-400' : 'text-white'}`}>
                     {entry.total_points}
-                    <span className="text-sm text-octagon-600 ml-1 font-body">pts</span>
+                    <span className="text-sm text-white/40 ml-1 font-body">pts</span>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           ) : (
-            <p className="text-octagon-600 text-center py-8">Aucun pronostic encore posé dans cette ligue</p>
+            <p className="text-white/40 text-center py-8">Aucun pronostic encore posé dans cette ligue</p>
           )}
         </div>
 
@@ -125,7 +130,7 @@ export default async function LeagueDetailPage({ params }: { params: { id: strin
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <div className="font-semibold text-sm tracking-wide">{event.name}</div>
-                    <div className="text-octagon-600 text-xs mt-0.5">
+                    <div className="text-white/40 text-xs mt-0.5">
                       {format(new Date(event.date), 'd MMM yyyy', { locale: fr })}
                     </div>
                   </div>
@@ -141,7 +146,7 @@ export default async function LeagueDetailPage({ params }: { params: { id: strin
       {isOwner && (
         <div className="card border-gold-500/30">
           <h2 className="font-display text-2xl tracking-wider mb-4 text-gold-400">ADMINISTRATION</h2>
-          <p className="text-octagon-600 text-sm tracking-wide">
+          <p className="text-white/40 text-sm tracking-wide">
             Tu es le créateur de cette ligue. Tu peux gérer les événements et les résultats depuis la page Événements.
           </p>
         </div>
