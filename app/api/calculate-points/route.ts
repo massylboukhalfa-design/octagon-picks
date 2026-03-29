@@ -59,7 +59,10 @@ export async function POST(request: Request) {
     let points = 0
     const correctWinner = pred.predicted_winner === result.winner
     const correctMethod = pred.predicted_method === result.method
-    const correctRound = pred.predicted_round === result.round
+    // Si Decision : le round est automatiquement correct si la méthode est bonne
+    const correctRound = result.method === 'Decision'
+      ? pred.predicted_method === 'Decision'
+      : pred.predicted_round === result.round
 
     if (correctWinner) points += POINTS.CORRECT_WINNER
     if (correctMethod) points += POINTS.CORRECT_METHOD
