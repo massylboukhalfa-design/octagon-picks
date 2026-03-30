@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import PredictionForm from '@/components/events/PredictionForm'
+import FighterCard from '@/components/fighters/FighterCard'
 
 export default async function EventDetailPage({
   params,
@@ -23,7 +24,7 @@ export default async function EventDetailPage({
 
   const { data: fights } = await supabase
     .from('fights')
-    .select('*, fight_results(*)')
+    .select('*, fight_results(*), fighter1:fighter1_id(*), fighter2:fighter2_id(*)')
     .eq('event_id', params.id)
     .order('is_main_event', { ascending: false })
     .order('card_order', { ascending: false })
@@ -112,7 +113,9 @@ export default async function EventDetailPage({
 
       {/* Fights */}
       <div className="space-y-4">
-        {fights?.map((fight: any) => (
+        {fights?.map((fight: any) => {
+          const hasFighterData = fight.fighter1 || fight.fighter2
+          return (
           <div key={fight.id} className={`card ${fight.is_main_event ? 'border-blood-500/50' : ''}`}>
             {fight.is_main_event && (
               <div className="badge-red mb-3 inline-flex">MAIN EVENT</div>
@@ -122,22 +125,41 @@ export default async function EventDetailPage({
               <div className="text-white/40 text-xs font-mono">{fight.scheduled_rounds} rounds</div>
             </div>
 
-            {/* Fighters */}
-            <div className="grid grid-cols-3 gap-4 items-center mb-6">
-              <div className="text-left">
-                <div className="font-display text-2xl tracking-wider">{fight.fighter1_name}</div>
-                {fight.fighter1_record && (
-                  <div className="text-white/40 text-xs font-mono mt-1">{fight.fighter1_record}</div>
-                )}
+            {/* Fighters — version enrichie si données disponibles */}
+            {hasFighterData ? (
+              <div className="grid grid-cols-[1fr_auto_1fr] gap-4 items-end mb-6">
+                <FighterCard
+                  fighter={fight.fighter1 ?? { id: '', name: fight.fighter1_name, wins: 0, losses: 0, draws: 0, wins_ko: 0, wins_sub: 0, wins_dec: 0, is_champion: false }}
+                  record={fight.fighter1_record}
+                  side="left"
+                />
+                <div className="text-center pb-6">
+                  <div className="font-display text-3xl text-white/20">VS</div>
+                </div>
+                <FighterCard
+                  fighter={fight.fighter2 ?? { id: '', name: fight.fighter2_name, wins: 0, losses: 0, draws: 0, wins_ko: 0, wins_sub: 0, wins_dec: 0, is_champion: false }}
+                  record={fight.fighter2_record}
+                  side="right"
+                />
               </div>
-              <div className="text-center font-display text-2xl text-white/30">VS</div>
-              <div className="text-right">
-                <div className="font-display text-2xl tracking-wider">{fight.fighter2_name}</div>
-                {fight.fighter2_record && (
-                  <div className="text-white/40 text-xs font-mono mt-1">{fight.fighter2_record}</div>
-                )}
+            ) : (
+              /* Version simple sans données fighter */
+              <div className="grid grid-cols-3 gap-4 items-center mb-6">
+                <div className="text-left">
+                  <div className="font-display text-2xl tracking-wider">{fight.fighter1_name}</div>
+                  {fight.fighter1_record && (
+                    <div className="text-white/40 text-xs font-mono mt-1">{fight.fighter1_record}</div>
+                  )}
+                </div>
+                <div className="text-center font-display text-2xl text-white/30">VS</div>
+                <div className="text-right">
+                  <div className="font-display text-2xl tracking-wider">{fight.fighter2_name}</div>
+                  {fight.fighter2_record && (
+                    <div className="text-white/40 text-xs font-mono mt-1">{fight.fighter2_record}</div>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Event terminé : résultat + prono côte à côte */}
             {isCompleted && (
@@ -163,7 +185,8 @@ export default async function EventDetailPage({
               <ExistingPrediction prediction={predictionMap[fight.id]} fight={fight} />
             )}
           </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )

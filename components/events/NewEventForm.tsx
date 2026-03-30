@@ -1,12 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 type Fight = {
   fighter1_name: string
   fighter2_name: string
+  fighter1_id: string | null
+  fighter2_id: string | null
   fighter1_record: string
   fighter2_record: string
   weight_class: string
@@ -21,7 +23,9 @@ const WEIGHT_CLASSES = [
 ]
 
 const emptyFight = (): Fight => ({
-  fighter1_name: '', fighter2_name: '', fighter1_record: '', fighter2_record: '',
+  fighter1_name: '', fighter2_name: '',
+  fighter1_id: null, fighter2_id: null,
+  fighter1_record: '', fighter2_record: '',
   weight_class: 'Heavyweight', scheduled_rounds: 3, is_main_event: false,
 })
 
@@ -34,9 +38,31 @@ export default function NewEventForm() {
   const [fights, setFights] = useState<Fight[]>([{ ...emptyFight(), is_main_event: true, scheduled_rounds: 5 }])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [fighters, setFighters] = useState<any[]>([])
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.from('fighters').select('id, name, wins, losses, draws, weight_class').order('name')
+      .then(({ data }) => setFighters(data ?? []))
+  }, [])
 
   const updateFight = (i: number, field: keyof Fight, value: any) => {
     setFights(prev => prev.map((f, idx) => idx === i ? { ...f, [field]: value } : f))
+  }
+
+  const handleFighterSelect = (i: number, side: 1 | 2, fighterId: string) => {
+    const fighter = fighters.find(f => f.id === fighterId)
+    if (!fighter) return
+    const nameField = side === 1 ? 'fighter1_name' : 'fighter2_name'
+    const idField = side === 1 ? 'fighter1_id' : 'fighter2_id'
+    const recordField = side === 1 ? 'fighter1_record' : 'fighter2_record'
+    setFights(prev => prev.map((f, idx) => idx === i ? {
+      ...f,
+      [nameField]: fighter.name,
+      [idField]: fighterId,
+      [recordField]: `${fighter.wins}-${fighter.losses}-${fighter.draws}`,
+      weight_class: fighter.weight_class || f.weight_class,
+    } : f))
   }
 
   const addFight = () => setFights(prev => [...prev, emptyFight()])
@@ -48,7 +74,6 @@ export default function NewEventForm() {
     setError('')
 
     const supabase = createClient()
-
     const { data: event, error: evErr } = await supabase
       .from('ufc_events')
       .insert({ name, date, location, prediction_deadline: deadline, status: 'upcoming' })
@@ -58,7 +83,15 @@ export default function NewEventForm() {
     if (evErr || !event) { setError('Erreur création événement'); setLoading(false); return }
 
     const fightInserts = fights.map((f, i) => ({
-      ...f,
+      fighter1_name: f.fighter1_name,
+      fighter2_name: f.fighter2_name,
+      fighter1_id: f.fighter1_id,
+      fighter2_id: f.fighter2_id,
+      fighter1_record: f.fighter1_record,
+      fighter2_record: f.fighter2_record,
+      weight_class: f.weight_class,
+      scheduled_rounds: f.scheduled_rounds,
+      is_main_event: f.is_main_event,
       event_id: event.id,
       card_order: fights.length - i,
     }))
@@ -96,43 +129,60 @@ export default function NewEventForm() {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="font-display text-2xl tracking-wider">COMBATS</h2>
-          <button type="button" onClick={addFight} className="btn-secondary text-xs py-2">+ Ajouter un combat</button>
+          <button type="button" onClick={addFight} className="btn-secondary text-xs py-2">+ Ajouter</button>
         </div>
 
         {fights.map((fight, i) => (
           <div key={i} className={`card space-y-4 ${fight.is_main_event ? 'border-blood-500/50' : ''}`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <span className="font-mono text-octagon-600 text-sm">#{fights.length - i}</span>
+                <span className="font-mono text-white/30 text-sm">#{fights.length - i}</span>
                 {fight.is_main_event && <span className="badge-red">MAIN EVENT</span>}
               </div>
               <div className="flex items-center gap-3">
-                <label className="flex items-center gap-2 text-xs text-octagon-600 cursor-pointer">
+                <label className="flex items-center gap-2 text-xs text-white/40 cursor-pointer">
                   <input type="checkbox" checked={fight.is_main_event}
                     onChange={e => updateFight(i, 'is_main_event', e.target.checked)} />
                   Main Event
                 </label>
                 {fights.length > 1 && (
-                  <button type="button" onClick={() => removeFight(i)} className="text-red-500 hover:text-red-400 text-xs">Retirer</button>
+                  <button type="button" onClick={() => removeFight(i)} className="text-red-500 text-xs">Retirer</button>
                 )}
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="label">Fighter 1</label>
-                <input className="input" placeholder="Jon Jones" value={fight.fighter1_name}
-                  onChange={e => updateFight(i, 'fighter1_name', e.target.value)} required />
-                <input className="input mt-1" placeholder="Record (ex: 27-1)" value={fight.fighter1_record}
-                  onChange={e => updateFight(i, 'fighter1_record', e.target.value)} />
-              </div>
-              <div>
-                <label className="label">Fighter 2</label>
-                <input className="input" placeholder="Stipe Miocic" value={fight.fighter2_name}
-                  onChange={e => updateFight(i, 'fighter2_name', e.target.value)} required />
-                <input className="input mt-1" placeholder="Record (ex: 20-4)" value={fight.fighter2_record}
-                  onChange={e => updateFight(i, 'fighter2_record', e.target.value)} />
-              </div>
+              {([1, 2] as const).map(side => {
+                const nameField = side === 1 ? 'fighter1_name' : 'fighter2_name'
+                const recordField = side === 1 ? 'fighter1_record' : 'fighter2_record'
+                const idField = side === 1 ? 'fighter1_id' : 'fighter2_id'
+                return (
+                  <div key={side}>
+                    <label className="label">Fighter {side}</label>
+                    {fighters.length > 0 && (
+                      <select
+                        className="input mb-1 text-sm"
+                        value={fight[idField] ?? ''}
+                        onChange={e => {
+                          if (e.target.value) handleFighterSelect(i, side, e.target.value)
+                          else updateFight(i, idField, null)
+                        }}
+                      >
+                        <option value="">— Saisie manuelle —</option>
+                        {fighters.map(f => (
+                          <option key={f.id} value={f.id}>{f.name} ({f.wins}-{f.losses}-{f.draws})</option>
+                        ))}
+                      </select>
+                    )}
+                    <input className="input" placeholder="Nom du combattant"
+                      value={fight[nameField]}
+                      onChange={e => updateFight(i, nameField, e.target.value)} required />
+                    <input className="input mt-1" placeholder="Record ex: 27-1"
+                      value={fight[recordField]}
+                      onChange={e => updateFight(i, recordField, e.target.value)} />
+                  </div>
+                )
+              })}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -144,7 +194,7 @@ export default function NewEventForm() {
                 </select>
               </div>
               <div>
-                <label className="label">Rounds prévus</label>
+                <label className="label">Rounds</label>
                 <select className="input" value={fight.scheduled_rounds}
                   onChange={e => updateFight(i, 'scheduled_rounds', Number(e.target.value))}>
                   <option value={3}>3 rounds</option>
@@ -157,8 +207,7 @@ export default function NewEventForm() {
       </div>
 
       {error && <p className="text-red-400 text-sm">{error}</p>}
-
-      <button type="submit" disabled={loading} className="btn-primary w-full py-4 text-base disabled:opacity-50">
+      <button type="submit" disabled={loading} className="btn-primary w-full py-4 disabled:opacity-50">
         {loading ? 'Création en cours...' : 'Créer l\'événement'}
       </button>
     </form>
