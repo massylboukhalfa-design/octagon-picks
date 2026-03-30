@@ -19,7 +19,7 @@ export default async function FightersPage() {
     .select('*')
     .order('name')
 
-  const weightClasses = [...new Set((fighters ?? []).map((f: any) => f.weight_class).filter(Boolean))]
+  const weightClasses = Array.from(new Set((fighters ?? []).map((f: any) => f.weight_class).filter(Boolean)))
 
   return (
     <div className="space-y-6 animate-fade-in">
