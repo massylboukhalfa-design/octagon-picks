@@ -139,9 +139,13 @@ export default async function EventDetailPage({
               </div>
             </div>
 
-            {/* Résultat officiel */}
-            {isCompleted && fight.fight_results?.[0] && (
-              <FightResultDisplay result={fight.fight_results[0]} fight={fight} />
+            {/* Event terminé : résultat + prono côte à côte */}
+            {isCompleted && (
+              <CompletedFightDisplay
+                result={fight.fight_results?.[0]}
+                prediction={predictionMap[fight.id]}
+                fight={fight}
+              />
             )}
 
             {/* Formulaire de pronostic */}
@@ -154,8 +158,8 @@ export default async function EventDetailPage({
               />
             )}
 
-            {/* Pronostic existant si fermé */}
-            {!isOpen && predictionMap[fight.id] && (
+            {/* Pronostic existant si event fermé mais pas terminé */}
+            {!isOpen && !isCompleted && predictionMap[fight.id] && (
               <ExistingPrediction prediction={predictionMap[fight.id]} fight={fight} />
             )}
           </div>
@@ -165,17 +169,69 @@ export default async function EventDetailPage({
   )
 }
 
-function FightResultDisplay({ result, fight }: { result: any; fight: any }) {
-  const winner = result.winner === 'fighter1' ? fight.fighter1_name
-    : result.winner === 'fighter2' ? fight.fighter2_name : 'Match nul'
+function CompletedFightDisplay({ result, prediction, fight }: { result: any; prediction: any; fight: any }) {
+  const resultWinner = result?.winner === 'fighter1' ? fight.fighter1_name
+    : result?.winner === 'fighter2' ? fight.fighter2_name
+    : result?.winner === 'draw' ? 'Match nul' : 'NC'
+
+  const predWinner = prediction?.predicted_winner === 'fighter1' ? fight.fighter1_name
+    : prediction?.predicted_winner === 'fighter2' ? fight.fighter2_name : 'Match nul'
+
+  const points = prediction?.points_earned
+  const isDecisionOrDraw = prediction?.predicted_method === 'Decision' || prediction?.predicted_winner === 'draw'
+
   return (
-    <div className="bg-octagon-700 border border-octagon-600 p-4 mb-4">
-      <div className="text-white/40 text-xs uppercase tracking-widest mb-2">Résultat officiel</div>
-      <div className="flex items-center gap-3 flex-wrap">
-        <span className="font-display text-xl text-gold-400">{winner}</span>
-        <span className="badge-gray">{result.method}</span>
-        <span className="badge-gray">R{result.round}</span>
-        {result.time && <span className="text-white/40 text-xs font-mono">{result.time}</span>}
+    <div className="border-t border-octagon-700 pt-4 mt-2">
+      <div className="grid grid-cols-2 gap-3">
+        {/* Résultat officiel */}
+        <div className="bg-octagon-700 border border-octagon-600 p-4">
+          <div className="text-white/40 text-xs uppercase tracking-widest mb-3">Résultat officiel</div>
+          {result ? (
+            <div className="space-y-1">
+              <div className="font-display text-lg text-gold-400 tracking-wider">{resultWinner}</div>
+              <div className="flex flex-wrap gap-1 mt-2">
+                <span className="badge-gray">{result.method}</span>
+                <span className="badge-gray">R{result.round}</span>
+                {result.time && <span className="text-white/40 text-xs font-mono self-center">{result.time}</span>}
+              </div>
+            </div>
+          ) : (
+            <span className="text-white/30 text-sm">Pas encore saisi</span>
+          )}
+        </div>
+
+        {/* Ton pronostic */}
+        <div className={`p-4 border ${
+          points === 30 ? 'bg-yellow-950/20 border-gold-500' :
+          points > 0 ? 'bg-octagon-700 border-octagon-600' :
+          'bg-octagon-700 border-octagon-600'
+        }`}>
+          <div className="text-white/40 text-xs uppercase tracking-widest mb-3">Ton pronostic</div>
+          {prediction ? (
+            <div className="space-y-1">
+              <div className="font-display text-lg tracking-wider">{predWinner}</div>
+              <div className="flex flex-wrap gap-1 mt-2">
+                <span className="badge-gray">{prediction.predicted_method}</span>
+                {!isDecisionOrDraw && (
+                  <span className="badge-gray">R{prediction.predicted_round}</span>
+                )}
+              </div>
+              {points !== null && points !== undefined && (
+                <div className="mt-3">
+                  <span className={`badge ${
+                    points === 30 ? 'badge-gold' :
+                    points > 0 ? 'badge-green' :
+                    'badge-gray'
+                  }`}>
+                    {points === 30 ? '★ ' : ''}{points} pts
+                  </span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <span className="text-white/30 text-sm">Pas de pronostic</span>
+          )}
+        </div>
       </div>
     </div>
   )
@@ -184,18 +240,14 @@ function FightResultDisplay({ result, fight }: { result: any; fight: any }) {
 function ExistingPrediction({ prediction, fight }: { prediction: any; fight: any }) {
   const winner = prediction.predicted_winner === 'fighter1' ? fight.fighter1_name
     : prediction.predicted_winner === 'fighter2' ? fight.fighter2_name : 'Match nul'
+  const isDecisionOrDraw = prediction.predicted_method === 'Decision' || prediction.predicted_winner === 'draw'
   return (
-    <div className="bg-octagon-700 border border-octagon-600 p-4">
+    <div className="bg-octagon-700 border border-octagon-600 p-4 border-t border-octagon-700 mt-2">
       <div className="text-white/40 text-xs uppercase tracking-widest mb-2">Ton pronostic</div>
       <div className="flex items-center gap-3 flex-wrap">
         <span className="font-semibold">{winner}</span>
         <span className="badge-gray">{prediction.predicted_method}</span>
-        <span className="badge-gray">R{prediction.predicted_round}</span>
-        {prediction.points_earned !== null && (
-          <span className={`badge ${prediction.points_earned > 0 ? 'badge-gold' : 'badge-gray'}`}>
-            {prediction.points_earned} pts
-          </span>
-        )}
+        {!isDecisionOrDraw && <span className="badge-gray">R{prediction.predicted_round}</span>}
       </div>
     </div>
   )

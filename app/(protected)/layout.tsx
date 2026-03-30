@@ -29,6 +29,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
               <NavLink href="/dashboard">Dashboard</NavLink>
               <NavLink href="/leagues">Ligues</NavLink>
               <NavLink href="/events">Événements</NavLink>
+              <NavLink href="/info">Infos</NavLink>
             </div>
           </div>
           <div className="flex items-center gap-4">
@@ -46,6 +47,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <NavLink href="/dashboard">Dashboard</NavLink>
           <NavLink href="/leagues">Ligues</NavLink>
           <NavLink href="/events">Événements</NavLink>
+          <NavLink href="/info">Infos</NavLink>
         </div>
       </div>
 
