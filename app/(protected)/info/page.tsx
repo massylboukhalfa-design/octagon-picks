@@ -132,7 +132,7 @@ export default function InfoPage() {
         </p>
         <div className="bg-octagon-700 border border-octagon-600 p-4">
           <div className="text-white/40 text-xs uppercase tracking-widest mb-1">Administrateur</div>
-          <div className="font-semibold tracking-wide">Massyl</div>
+                  <div className="font-semibold tracking-wide">Massyl : octagonpicks1@gmail.com</div>
         </div>
       </section>
     </div>
