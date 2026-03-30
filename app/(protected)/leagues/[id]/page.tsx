@@ -33,6 +33,13 @@ export default async function LeagueDetailPage({ params }: { params: { id: strin
     .eq('league_id', params.id)
     .order('total_points', { ascending: false })
 
+  // Avatars des membres
+  const memberIds = (leaderboard ?? []).map((e: any) => e.user_id)
+  const { data: memberProfiles } = memberIds.length > 0
+    ? await supabase.from('profiles').select('id, avatar_url').in('id', memberIds)
+    : { data: [] }
+  const avatarMap = Object.fromEntries((memberProfiles ?? []).map((p: any) => [p.id, p.avatar_url]))
+
   // Events with predictions count for this league
   const { data: events } = await supabase
     .from('ufc_events')
@@ -90,12 +97,25 @@ export default async function LeagueDetailPage({ params }: { params: { id: strin
                     'border-octagon-700 bg-octagon-800 hover:bg-octagon-700'
                   } ${entry.user_id === user!.id ? 'border-l-2 border-l-blood-500' : ''}`}
                 >
-                  <div className={`font-display text-2xl w-8 text-center ${
+                  {/* Rang */}
+                  <div className={`font-display text-2xl w-8 text-center flex-shrink-0 ${
                     i === 0 ? 'text-gold-400' : i === 1 ? 'text-gray-400' : i === 2 ? 'text-amber-700' : 'text-white/40'
                   }`}>
                     {i + 1}
                   </div>
-                  <div className="flex-1">
+
+                  {/* Avatar */}
+                  <div className="w-10 h-10 rounded-full overflow-hidden border border-octagon-600 bg-octagon-700 flex-shrink-0">
+                    {avatarMap[entry.user_id] ? (
+                      <img src={avatarMap[entry.user_id]} alt={entry.username} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <span className="font-display text-lg text-white/20">{entry.username?.charAt(0)?.toUpperCase()}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex-1 min-w-0">
                     <div className="font-semibold tracking-wide flex items-center gap-2">
                       {entry.username}
                       {entry.user_id === user!.id && <span className="badge-red text-xs">Toi</span>}
@@ -105,7 +125,7 @@ export default async function LeagueDetailPage({ params }: { params: { id: strin
                       <span className="text-white/40 text-xs">🎯 {entry.perfect_picks} parfaits</span>
                     </div>
                   </div>
-                  <div className={`font-display text-3xl ${i === 0 ? 'text-gold-400' : 'text-white'}`}>
+                  <div className={`font-display text-3xl flex-shrink-0 ${i === 0 ? 'text-gold-400' : 'text-white'}`}>
                     {entry.total_points}
                     <span className="text-sm text-white/40 ml-1 font-body">pts</span>
                   </div>
