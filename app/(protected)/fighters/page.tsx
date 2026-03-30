@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import ImportFighters from '@/components/fighters/ImportFighters'
 
 export default async function FightersPage() {
   const supabase = createClient()
@@ -40,6 +41,8 @@ export default async function FightersPage() {
       <div className="flex items-center justify-between">
         <span className="text-white/40 font-mono text-sm">{fighters?.length ?? 0} combattant(s)</span>
       </div>
+
+      <ImportFighters />
 
       {(!fighters || fighters.length === 0) ? (
         <div className="text-center py-16">
