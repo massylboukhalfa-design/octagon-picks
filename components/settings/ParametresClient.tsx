@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import FighterSearch from '@/components/fighters/FighterSearch'
 
 type Fighter = { id: string; name: string; photo_url?: string; weight_class?: string; country_flag?: string }
 
@@ -183,38 +184,12 @@ function CompteTab({ userId, email, profile, fighters, router }: any) {
         <div>
           <label className="label">Combattant favori <span className="text-white/30 normal-case font-normal">(optionnel)</span></label>
           {fighters.length > 0 ? (
-            <div className="space-y-3">
-              <select
-                className="input"
-                value={favFighterId}
-                onChange={e => setFavFighterId(e.target.value)}
-              >
-                <option value="">— Aucun sélectionné —</option>
-                {fighters.map((f: any) => (
-                  <option key={f.id} value={f.id}>
-                    {f.country_flag ? f.country_flag + ' ' : ''}{f.name}{f.weight_class ? ` (${f.weight_class})` : ''}
-                  </option>
-                ))}
-              </select>
-
-              {favFighter && (
-                <div className="flex items-center gap-3 bg-octagon-700 border border-octagon-600 p-3">
-                  <div className="w-12 h-12 rounded-full overflow-hidden border border-octagon-600 bg-octagon-600 flex-shrink-0">
-                    {favFighter.photo_url ? (
-                      <img src={favFighter.photo_url} alt={favFighter.name} className="w-full h-full object-cover object-top" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <span className="font-display text-lg text-white/20">{favFighter.name.charAt(0)}</span>
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <div className="font-semibold text-sm">{favFighter.name}</div>
-                    <div className="text-white/40 text-xs">{favFighter.weight_class}</div>
-                  </div>
-                </div>
-              )}
-            </div>
+            <FighterSearch
+              fighters={fighters}
+              value={favFighterId || null}
+              onChange={(id) => setFavFighterId(id ?? '')}
+              placeholder="Rechercher un combattant..."
+            />
           ) : (
             <p className="text-white/30 text-sm">Aucun combattant dans la base. Ajoutes-en depuis la page Fighters.</p>
           )}

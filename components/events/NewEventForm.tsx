@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import FighterSearch from '@/components/fighters/FighterSearch'
 
 type Fight = {
   fighter1_name: string
@@ -61,7 +62,7 @@ export default function NewEventForm() {
       [nameField]: fighter.name,
       [idField]: fighterId,
       [recordField]: `${fighter.wins}-${fighter.losses}-${fighter.draws}`,
-      weight_class: fighter.weight_class || f.weight_class,
+      weight_class: (fighter as any).weight_class || f.weight_class,
     } : f))
   }
 
@@ -157,27 +158,27 @@ export default function NewEventForm() {
                 const recordField = side === 1 ? 'fighter1_record' : 'fighter2_record'
                 const idField = side === 1 ? 'fighter1_id' : 'fighter2_id'
                 return (
-                  <div key={side}>
+                  <div key={side} className="space-y-2">
                     <label className="label">Fighter {side}</label>
                     {fighters.length > 0 && (
-                      <select
-                        className="input mb-1 text-sm"
-                        value={fight[idField] ?? ''}
-                        onChange={e => {
-                          if (e.target.value) handleFighterSelect(i, side, e.target.value)
+                      <FighterSearch
+                        fighters={fighters}
+                        value={fight[idField]}
+                        onChange={(id, fighter) => {
+                          if (fighter) handleFighterSelect(i, side, fighter.id)
                           else updateFight(i, idField, null)
                         }}
-                      >
-                        <option value="">— Saisie manuelle —</option>
-                        {fighters.map(f => (
-                          <option key={f.id} value={f.id}>{f.name} ({f.wins}-{f.losses}-{f.draws})</option>
-                        ))}
-                      </select>
+                        placeholder={`Chercher fighter ${side}...`}
+                      />
                     )}
-                    <input className="input" placeholder="Nom du combattant"
+                    <input
+                      className="input text-sm"
+                      placeholder={fighters.length > 0 ? 'Ou saisir manuellement' : 'Nom du combattant'}
                       value={fight[nameField]}
-                      onChange={e => updateFight(i, nameField, e.target.value)} required />
-                    <input className="input mt-1" placeholder="Record ex: 27-1"
+                      onChange={e => updateFight(i, nameField, e.target.value)}
+                      required={!fight[idField]}
+                    />
+                    <input className="input text-sm" placeholder="Record ex: 27-1"
                       value={fight[recordField]}
                       onChange={e => updateFight(i, recordField, e.target.value)} />
                   </div>
