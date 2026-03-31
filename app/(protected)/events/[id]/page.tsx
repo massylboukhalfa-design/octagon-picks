@@ -5,7 +5,7 @@ import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import PredictionForm from '@/components/events/PredictionForm'
 import FighterCard from '@/components/fighters/FighterCard'
-import FighterFormBadge from '@/components/fighters/FighterForm'
+import FighterFormBadge from '@/components/fighters/FighterFormBadge'
 
 export default async function EventDetailPage({
   params,

@@ -1,4 +1,4 @@
-import FighterFormBadge from '@/components/fighters/FighterForm'
+import FighterFormBadge from '@/components/fighters/FighterFormBadge'
 
 type Fighter = {
   id: string

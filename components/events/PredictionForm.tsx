@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { FIGHT_METHODS, FightMethod } from '@/types'
+import FighterFormBadge from '@/components/fighters/FighterFormBadge'
 
 type Props = {
   fight: any
@@ -128,9 +129,9 @@ export default function PredictionForm({ fight, userId, userLeagues, existing }:
         <label className="label">Vainqueur</label>
         <div className="grid grid-cols-3 gap-2">
           {([
-            { value: 'fighter1', label: fight.fighter1_name },
-            { value: 'fighter2', label: fight.fighter2_name },
-            { value: 'draw', label: 'Match nul' },
+            { value: 'fighter1', label: fight.fighter1_name, form: fight.fighter1?.form ?? fight.fighter1_form },
+            { value: 'fighter2', label: fight.fighter2_name, form: fight.fighter2?.form ?? fight.fighter2_form },
+            { value: 'draw', label: 'Match nul', form: null },
           ] as const).map(opt => (
             <button
               key={opt.value}
@@ -141,7 +142,12 @@ export default function PredictionForm({ fight, userId, userLeagues, existing }:
                   : 'border-octagon-600 text-white/40 hover:border-octagon-500 hover:text-white'
               }`}
             >
-              {opt.label}
+              <div className="truncate">{opt.label}</div>
+              {opt.form && opt.form.length > 0 && (
+                <div className={`flex justify-center mt-1.5 ${winner === opt.value ? 'opacity-100' : 'opacity-60'}`}>
+                  <FighterFormBadge form={opt.form} size="sm" />
+                </div>
+              )}
             </button>
           ))}
         </div>
