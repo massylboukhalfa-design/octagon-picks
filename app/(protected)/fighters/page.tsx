@@ -33,9 +33,14 @@ export default async function FightersPage() {
           </div>
           <h1 className="font-display text-5xl tracking-wider">COMBATTANTS</h1>
         </div>
-        <Link href="/fighters/new" className="btn-gold text-sm py-2">
-          + Ajouter un combattant
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/fighters/enrich" className="btn-secondary text-sm py-2">
+            🖼 Photos
+          </Link>
+          <Link href="/fighters/new" className="btn-gold text-sm py-2">
+            + Ajouter un combattant
+          </Link>
+        </div>
       </div>
 
       <div className="flex items-center justify-between">
