@@ -5,6 +5,7 @@ import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import PredictionForm from '@/components/events/PredictionForm'
 import FighterCard from '@/components/fighters/FighterCard'
+import FighterFormBadge from '@/components/fighters/FighterForm'
 
 export default async function EventDetailPage({
   params,
@@ -24,7 +25,7 @@ export default async function EventDetailPage({
 
   const { data: fights } = await supabase
     .from('fights')
-    .select('*, fight_results(*), fighter1:fighter1_id(*), fighter2:fighter2_id(*)')
+    .select('*, fight_results(*), fighter1:fighter1_id(*, form), fighter2:fighter2_id(*, form)')
     .eq('event_id', params.id)
     .order('is_main_event', { ascending: false })
     .order('card_order', { ascending: false })
@@ -161,15 +162,6 @@ export default async function EventDetailPage({
               </div>
             )}
 
-            {/* Event terminé : résultat + prono côte à côte */}
-            {isCompleted && (
-              <CompletedFightDisplay
-                result={fight.fight_results?.[0]}
-                prediction={predictionMap[fight.id]}
-                fight={fight}
-              />
-            )}
-
             {/* Formulaire de pronostic */}
             {isOpen && (
               <PredictionForm
@@ -177,6 +169,15 @@ export default async function EventDetailPage({
                 userId={user!.id}
                 userLeagues={userLeagues}
                 existing={predictionMap[fight.id]}
+              />
+            )}
+
+            {/* Event terminé : résultat + prono côte à côte */}
+            {isCompleted && (
+              <CompletedFightDisplay
+                result={fight.fight_results?.[0]}
+                prediction={predictionMap[fight.id]}
+                fight={fight}
               />
             )}
 

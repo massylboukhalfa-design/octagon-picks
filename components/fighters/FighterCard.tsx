@@ -1,3 +1,5 @@
+import FighterFormBadge from '@/components/fighters/FighterForm'
+
 type Fighter = {
   id: string
   name: string
@@ -17,6 +19,7 @@ type Fighter = {
   weight_class?: string
   is_champion: boolean
   ranking?: number
+  form?: string[]
 }
 
 type Props = {
@@ -88,6 +91,13 @@ export default function FighterCard({ fighter, record, side, isSelected, onClick
           <div className="font-mono text-sm text-white/60 mt-1">
             {record ?? `${fighter.wins}-${fighter.losses}-${fighter.draws}`}
           </div>
+
+          {/* Forme */}
+          {fighter.form && fighter.form.length > 0 && (
+            <div className={`flex mt-2 ${isRight ? 'justify-end' : 'justify-start'}`}>
+              <FighterFormBadge form={fighter.form as any} size="sm" />
+            </div>
+          )}
 
           {/* Stats victoires */}
           <div className={`flex gap-2 mt-2 ${isRight ? 'justify-end' : 'justify-start'}`}>
