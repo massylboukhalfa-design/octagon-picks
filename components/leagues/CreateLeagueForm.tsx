@@ -5,8 +5,14 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { generateInviteCode } from '@/lib/utils'
 
-export default function CreateLeagueForm({ userId, locale = 'fr' }: { userId: string; locale?: string }) {
+function useLocale() {
+  if (typeof document === 'undefined') return 'fr'
+  return document.cookie.match(/locale=(\w+)/)?.[1] ?? (navigator.language?.toLowerCase().startsWith('fr') ? 'fr' : 'en')
+}
+
+export default function CreateLeagueForm({ userId }: { userId: string }) {
   const router = useRouter()
+  const locale = useLocale()
   const fr = locale === 'fr'
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')

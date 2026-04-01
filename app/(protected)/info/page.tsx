@@ -145,9 +145,10 @@ export default function InfoPage() {
             ? 'Pour toute question, signalement d\'un bug ou suggestion, contacte l\'administrateur directement.'
             : 'For any question, bug report or suggestion, contact the admin directly.'}
         </p>
-        <div className="bg-octagon-700 border border-octagon-600 p-4">
+        <div className="bg-octagon-700 border border-octagon-600 p-4 space-y-1">
           <div className="text-white/40 text-xs uppercase tracking-widest mb-1">{locale === 'fr' ? 'Administrateur' : 'Admin'}</div>
           <div className="font-semibold tracking-wide">Massyl</div>
+          <div className="font-mono text-sm text-white/60">octagonpicks1@gmail.com</div>
         </div>
       </section>
     </div>

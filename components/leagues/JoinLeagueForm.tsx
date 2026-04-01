@@ -4,8 +4,14 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
-export default function JoinLeagueForm({ userId, locale = 'fr' }: { userId: string; locale?: string }) {
+function useLocale() {
+  if (typeof document === 'undefined') return 'fr'
+  return document.cookie.match(/locale=(\w+)/)?.[1] ?? (navigator.language?.toLowerCase().startsWith('fr') ? 'fr' : 'en')
+}
+
+export default function JoinLeagueForm({ userId }: { userId: string }) {
   const router = useRouter()
+  const locale = useLocale()
   const fr = locale === 'fr'
   const [code, setCode] = useState('')
   const [loading, setLoading] = useState(false)
