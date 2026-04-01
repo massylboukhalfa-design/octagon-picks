@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import FighterSearch from '@/components/fighters/FighterSearch'
+import InviteSection from '@/components/settings/InviteSection'
 
 type Fighter = { id: string; name: string; photo_url?: string; weight_class?: string; country_flag?: string }
 
@@ -213,6 +214,9 @@ function CompteTab({ userId, email, profile, fighters, router }: any) {
           {loadingReset ? 'Envoi...' : 'Recevoir le lien de réinitialisation'}
         </button>
       </div>
+
+      {/* Inviter des amis */}
+      <InviteSection />
 
       {/* Supprimer le compte */}
       <div className="card border-red-900/50 space-y-4">
