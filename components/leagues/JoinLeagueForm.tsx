@@ -4,8 +4,9 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
-export default function JoinLeagueForm({ userId }: { userId: string }) {
+export default function JoinLeagueForm({ userId, locale = 'fr' }: { userId: string; locale?: string }) {
   const router = useRouter()
+  const fr = locale === 'fr'
   const [code, setCode] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -19,31 +20,29 @@ export default function JoinLeagueForm({ userId }: { userId: string }) {
     setSuccess('')
 
     const supabase = createClient()
-
     const { data: league } = await supabase
-      .from('leagues')
-      .select('id, name')
-      .eq('invite_code', code.trim().toUpperCase())
-      .single()
+      .from('leagues').select('id, name')
+      .eq('invite_code', code.trim().toUpperCase()).single()
 
     if (!league) {
-      setError('Code invalide — ligue introuvable')
+      setError(fr ? 'Code invalide — ligue introuvable' : 'Invalid code — league not found')
       setLoading(false)
       return
     }
 
     const { error: joinErr } = await supabase
-      .from('league_members')
-      .insert({ league_id: league.id, user_id: userId })
+      .from('league_members').insert({ league_id: league.id, user_id: userId })
 
     if (joinErr) {
-      if (joinErr.code === '23505') setError('Tu es déjà membre de cette ligue')
-      else setError('Erreur lors de la tentative de rejoindre')
+      if (joinErr.code === '23505')
+        setError(fr ? 'Tu es déjà membre de cette ligue' : 'You are already a member of this league')
+      else
+        setError(fr ? 'Erreur lors de la tentative de rejoindre' : 'Error joining league')
       setLoading(false)
       return
     }
 
-    setSuccess(`Tu as rejoint "${league.name}" !`)
+    setSuccess(fr ? `Tu as rejoint "${league.name}" !` : `You joined "${league.name}"!`)
     setCode('')
     setLoading(false)
     router.refresh()
@@ -51,13 +50,15 @@ export default function JoinLeagueForm({ userId }: { userId: string }) {
 
   return (
     <div className="card">
-      <h2 className="font-display text-2xl tracking-wider mb-5">REJOINDRE UNE LIGUE</h2>
+      <h2 className="font-display text-2xl tracking-wider mb-5">
+        {fr ? 'REJOINDRE UNE LIGUE' : 'JOIN A LEAGUE'}
+      </h2>
       <form onSubmit={handleJoin} className="space-y-4">
         <div>
-          <label className="label">Code d'invitation</label>
+          <label className="label">{fr ? "Code d'invitation" : 'Invite code'}</label>
           <input
             className="input font-mono uppercase tracking-[0.3em] text-gold-400"
-            placeholder="EX: AB12CD"
+            placeholder="AB12CD"
             value={code}
             onChange={e => setCode(e.target.value.toUpperCase())}
             maxLength={6}
@@ -67,7 +68,7 @@ export default function JoinLeagueForm({ userId }: { userId: string }) {
         {error && <p className="text-red-400 text-sm">{error}</p>}
         {success && <p className="text-emerald-400 text-sm">{success}</p>}
         <button type="submit" disabled={loading} className="btn-secondary w-full disabled:opacity-50">
-          {loading ? 'Vérification...' : 'Rejoindre'}
+          {loading ? (fr ? 'Vérification...' : 'Checking...') : (fr ? 'Rejoindre' : 'Join')}
         </button>
       </form>
     </div>

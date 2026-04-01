@@ -37,7 +37,7 @@ export default async function FightersPage() {
         {fighters?.length ?? 0} {locale === 'fr' ? 'combattant(s)' : 'fighters'}
       </span>
 
-      <ImportFighters />
+      <ImportFighters locale={locale} />
 
       {(!fighters || fighters.length === 0) ? (
         <div className="text-center py-16">

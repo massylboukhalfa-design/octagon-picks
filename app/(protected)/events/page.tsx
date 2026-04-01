@@ -43,7 +43,7 @@ export default async function EventsPage() {
         )}
       </div>
 
-      {profile?.is_admin && <ImportEvents />}
+      {profile?.is_admin && <ImportEvents locale={locale} />}
 
       {upcoming.length > 0 && (
         <div>

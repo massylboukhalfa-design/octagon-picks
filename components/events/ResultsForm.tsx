@@ -12,8 +12,9 @@ type FightResult = {
   time: string
 }
 
-export default function ResultsForm({ eventId, fights }: { eventId: string; fights: any[] }) {
+export default function ResultsForm({ eventId, fights, locale = 'fr' }: { eventId: string; fights: any[]; locale?: string }) {
   const router = useRouter()
+  const fr = locale === 'fr'
   const [results, setResults] = useState<Record<string, FightResult>>(
     Object.fromEntries(fights.map(f => [
       f.id,
@@ -48,10 +49,7 @@ export default function ResultsForm({ eventId, fights }: { eventId: string; figh
       }
     }
 
-    // Mark event as completed
     await supabase.from('ufc_events').update({ status: 'completed' }).eq('id', eventId)
-
-    // Trigger points calculation via API route
     await fetch('/api/calculate-points', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -72,13 +70,13 @@ export default function ResultsForm({ eventId, fights }: { eventId: string; figh
           <div key={fight.id} className={`card ${fight.is_main_event ? 'border-blood-500/50' : ''}`}>
             {fight.is_main_event && <div className="badge-red mb-3 inline-flex">MAIN EVENT</div>}
             <div className="font-display text-xl tracking-wider mb-4">
-              {fight.fighter1_name} <span className="text-octagon-600">vs</span> {fight.fighter2_name}
+              {fight.fighter1_name} <span className="text-white/40">vs</span> {fight.fighter2_name}
             </div>
 
             <div className="space-y-4">
               {/* Winner */}
               <div>
-                <label className="label">Vainqueur</label>
+                <label className="label">{fr ? 'Vainqueur' : 'Winner'}</label>
                 <div className="grid grid-cols-4 gap-2">
                   {[
                     { v: 'fighter1', label: fight.fighter1_name },
@@ -89,7 +87,7 @@ export default function ResultsForm({ eventId, fights }: { eventId: string; figh
                     <button key={opt.v} type="button"
                       onClick={() => update(fight.id, 'winner', opt.v)}
                       className={`py-2 text-sm border font-semibold transition-all ${
-                        r.winner === opt.v ? 'border-blood-500 bg-blood-500/10 text-white' : 'border-octagon-600 text-octagon-600 hover:border-octagon-500 hover:text-white'
+                        r.winner === opt.v ? 'border-blood-500 bg-blood-500/10 text-white' : 'border-octagon-600 text-white/40 hover:border-octagon-500 hover:text-white'
                       }`}>
                       {opt.label}
                     </button>
@@ -100,13 +98,13 @@ export default function ResultsForm({ eventId, fights }: { eventId: string; figh
               <div className="grid grid-cols-2 gap-4">
                 {/* Method */}
                 <div>
-                  <label className="label">Méthode</label>
+                  <label className="label">{fr ? 'Méthode' : 'Method'}</label>
                   <div className="flex flex-wrap gap-2">
                     {FIGHT_METHODS.map(m => (
                       <button key={m} type="button"
                         onClick={() => update(fight.id, 'method', m)}
                         className={`py-1 px-2 border text-xs font-mono transition-all ${
-                          r.method === m ? 'border-gold-500 text-gold-400 bg-yellow-950/30' : 'border-octagon-600 text-octagon-600 hover:text-white'
+                          r.method === m ? 'border-gold-500 text-gold-400 bg-yellow-950/30' : 'border-octagon-600 text-white/40 hover:text-white'
                         }`}>
                         {m}
                       </button>
@@ -122,7 +120,7 @@ export default function ResultsForm({ eventId, fights }: { eventId: string; figh
                       <button key={rnd} type="button"
                         onClick={() => update(fight.id, 'round', rnd)}
                         className={`w-9 h-9 border font-display text-lg transition-all ${
-                          r.round === rnd ? 'border-blood-500 bg-blood-500/10 text-white' : 'border-octagon-600 text-octagon-600 hover:text-white'
+                          r.round === rnd ? 'border-blood-500 bg-blood-500/10 text-white' : 'border-octagon-600 text-white/40 hover:text-white'
                         }`}>
                         {rnd}
                       </button>
@@ -133,7 +131,7 @@ export default function ResultsForm({ eventId, fights }: { eventId: string; figh
 
               {/* Time */}
               <div>
-                <label className="label">Temps (optionnel)</label>
+                <label className="label">{fr ? 'Temps (optionnel)' : 'Time (optional)'}</label>
                 <input className="input w-32" placeholder="4:32" value={r.time}
                   onChange={e => update(fight.id, 'time', e.target.value)} />
               </div>
@@ -147,7 +145,11 @@ export default function ResultsForm({ eventId, fights }: { eventId: string; figh
         disabled={loading}
         className={`${saved ? 'btn-secondary border-emerald-700 text-emerald-400' : 'btn-gold'} w-full py-4 text-base disabled:opacity-50`}
       >
-        {loading ? 'Sauvegarde...' : saved ? '✓ Résultats enregistrés — calcul des points...' : 'Valider les résultats & calculer les points'}
+        {loading
+          ? (fr ? 'Sauvegarde...' : 'Saving...')
+          : saved
+          ? (fr ? '✓ Résultats enregistrés — calcul des points...' : '✓ Results saved — calculating points...')
+          : (fr ? 'Valider les résultats & calculer les points' : 'Submit results & calculate points')}
       </button>
     </div>
   )
