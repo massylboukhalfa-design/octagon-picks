@@ -4,22 +4,15 @@ import { useState, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 type Fighter = {
-  id: string
-  name: string
-  nickname?: string | null
-  photo_url?: string | null
-  weight_class?: string | null
-  wins: number
-  losses: number
-  draws: number
-  country_flag?: string | null
-  is_champion: boolean
-  ranking?: number | null
+  id: string; name: string; nickname?: string | null; photo_url?: string | null
+  weight_class?: string | null; wins: number; losses: number; draws: number
+  country_flag?: string | null; is_champion: boolean; ranking?: number | null
 }
 
 type Filter = 'all' | 'missing' | 'done'
 
-export default function EnrichGrid({ fighters }: { fighters: Fighter[] }) {
+export default function EnrichGrid({ fighters, locale = 'fr' }: { fighters: Fighter[]; locale?: string }) {
+  const fr = locale === 'fr'
   const [filter, setFilter] = useState<Filter>('missing')
   const [search, setSearch] = useState('')
   const [weightClass, setWeightClass] = useState('')
@@ -49,10 +42,7 @@ export default function EnrichGrid({ fighters }: { fighters: Fighter[] }) {
     const ext = file.name.split('.').pop()
     const path = `${fighter.id}.${ext}`
 
-    const { error: uploadErr } = await supabase.storage
-      .from('fighters')
-      .upload(path, file, { upsert: true })
-
+    const { error: uploadErr } = await supabase.storage.from('fighters').upload(path, file, { upsert: true })
     if (uploadErr) {
       setErrors(p => ({ ...p, [fighter.id]: uploadErr.message }))
       setUploading(p => ({ ...p, [fighter.id]: false }))
@@ -62,11 +52,7 @@ export default function EnrichGrid({ fighters }: { fighters: Fighter[] }) {
     const { data: urlData } = supabase.storage.from('fighters').getPublicUrl(path)
     const url = urlData.publicUrl + '?t=' + Date.now()
 
-    const { error: dbErr } = await supabase
-      .from('fighters')
-      .update({ photo_url: url })
-      .eq('id', fighter.id)
-
+    const { error: dbErr } = await supabase.from('fighters').update({ photo_url: url }).eq('id', fighter.id)
     if (dbErr) {
       setErrors(p => ({ ...p, [fighter.id]: dbErr.message }))
     } else {
@@ -88,14 +74,12 @@ export default function EnrichGrid({ fighters }: { fighters: Fighter[] }) {
 
   return (
     <div className="space-y-5">
-      {/* Filtres */}
       <div className="flex flex-wrap items-center gap-3">
-        {/* Onglets */}
         <div className="flex border border-octagon-700">
           {([
-            ['all', `Tous (${fighters.length})`],
-            ['missing', `Sans photo (${missing})`],
-            ['done', `Avec photo (${done})`],
+            ['all', fr ? `Tous (${fighters.length})` : `All (${fighters.length})`],
+            ['missing', fr ? `Sans photo (${missing})` : `Missing (${missing})`],
+            ['done', fr ? `Avec photo (${done})` : `With photo (${done})`],
           ] as [Filter, string][]).map(([val, label]) => (
             <button key={val} onClick={() => setFilter(val)}
               className={`px-4 py-2 text-xs font-semibold uppercase tracking-widest transition-colors ${
@@ -106,25 +90,19 @@ export default function EnrichGrid({ fighters }: { fighters: Fighter[] }) {
           ))}
         </div>
 
-        {/* Recherche */}
-        <input
-          type="text"
-          placeholder="Rechercher..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="input py-2 text-sm w-48"
-        />
+        <input type="text" placeholder={fr ? 'Rechercher...' : 'Search...'}
+          value={search} onChange={e => setSearch(e.target.value)}
+          className="input py-2 text-sm w-48" />
 
-        {/* Catégorie */}
         <select value={weightClass} onChange={e => setWeightClass(e.target.value)} className="input py-2 text-sm">
-          <option value="">Toutes catégories</option>
+          <option value="">{fr ? 'Toutes catégories' : 'All divisions'}</option>
           {weightClasses.map(w => <option key={w} value={w}>{w}</option>)}
         </select>
 
         {(search || weightClass) && (
           <button onClick={() => { setSearch(''); setWeightClass('') }}
             className="text-white/40 hover:text-white text-xs transition-colors">
-            Réinitialiser
+            {fr ? 'Réinitialiser' : 'Reset'}
           </button>
         )}
       </div>
@@ -132,47 +110,42 @@ export default function EnrichGrid({ fighters }: { fighters: Fighter[] }) {
       {filtered.length === 0 && (
         <div className="text-center py-16">
           <p className="font-display text-3xl text-white/20">
-            {filter === 'missing' ? '✓ Tous les fighters ont une photo' : 'Aucun résultat'}
+            {filter === 'missing'
+              ? (fr ? '✓ Tous les fighters ont une photo' : '✓ All fighters have a photo')
+              : (fr ? 'Aucun résultat' : 'No results')}
           </p>
         </div>
       )}
 
-      {/* Grille */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
         {filtered.map(fighter => (
           <FighterCard
-            key={fighter.id}
-            fighter={fighter}
+            key={fighter.id} fighter={fighter}
             photoUrl={photos[fighter.id]}
             uploading={uploading[fighter.id]}
             saved={saved[fighter.id]}
             error={errors[fighter.id]}
-            onUpload={uploadPhoto}
-            onRemove={removePhoto}
+            onUpload={uploadPhoto} onRemove={removePhoto}
+            locale={locale}
           />
         ))}
       </div>
 
       {filtered.length > 0 && (
         <div className="text-white/30 text-xs text-center pt-2">
-          {filtered.length} fighter{filtered.length > 1 ? 's' : ''} affiché{filtered.length > 1 ? 's' : ''}
+          {filtered.length} fighter{filtered.length > 1 ? 's' : ''} {fr ? `affiché${filtered.length > 1 ? 's' : ''}` : 'shown'}
         </div>
       )}
     </div>
   )
 }
 
-function FighterCard({
-  fighter, photoUrl, uploading, saved, error, onUpload, onRemove
-}: {
-  fighter: Fighter
-  photoUrl?: string
-  uploading?: boolean
-  saved?: boolean
-  error?: string
-  onUpload: (f: Fighter, file: File) => void
-  onRemove: (f: Fighter) => void
+function FighterCard({ fighter, photoUrl, uploading, saved, error, onUpload, onRemove, locale = 'fr' }: {
+  fighter: Fighter; photoUrl?: string; uploading?: boolean; saved?: boolean
+  error?: string; locale?: string
+  onUpload: (f: Fighter, file: File) => void; onRemove: (f: Fighter) => void
 }) {
+  const fr = locale === 'fr'
   const fileRef = useRef<HTMLInputElement>(null)
 
   const handleDrop = (e: React.DragEvent) => {
@@ -194,20 +167,12 @@ function FighterCard({
         photoUrl ? 'border-octagon-600 bg-octagon-800' :
         'border-octagon-700 border-dashed bg-octagon-800/50'
       }`}
-      onDrop={handleDrop}
-      onDragOver={e => e.preventDefault()}
+      onDrop={handleDrop} onDragOver={e => e.preventDefault()}
     >
-      {/* Photo ou placeholder */}
-      <div
-        className="w-full aspect-square overflow-hidden cursor-pointer relative"
-        onClick={() => !uploading && fileRef.current?.click()}
-      >
+      <div className="w-full aspect-square overflow-hidden cursor-pointer relative"
+        onClick={() => !uploading && fileRef.current?.click()}>
         {photoUrl ? (
-          <img
-            src={photoUrl}
-            alt={fighter.name}
-            className="w-full h-full object-cover object-top"
-          />
+          <img src={photoUrl} alt={fighter.name} className="w-full h-full object-cover object-top" />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center bg-octagon-700 group-hover:bg-octagon-600 transition-colors">
             {uploading ? (
@@ -220,61 +185,34 @@ function FighterCard({
             )}
           </div>
         )}
-
-        {/* Overlay hover sur photo existante */}
         {photoUrl && !uploading && (
           <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-            <span className="text-white text-xs uppercase tracking-widest font-semibold">Changer</span>
+            <span className="text-white text-xs uppercase tracking-widest font-semibold">
+              {fr ? 'Changer' : 'Change'}
+            </span>
           </div>
         )}
-
-        {/* Indicateurs */}
-        {saved && (
-          <div className="absolute top-1 right-1 bg-emerald-500 text-white text-xs px-1.5 py-0.5 font-semibold">✓</div>
-        )}
-        {fighter.is_champion && (
-          <div className="absolute top-1 left-1 badge-gold text-xs">C</div>
-        )}
+        {saved && <div className="absolute top-1 right-1 bg-emerald-500 text-white text-xs px-1.5 py-0.5 font-semibold">✓</div>}
+        {fighter.is_champion && <div className="absolute top-1 left-1 badge-gold text-xs">C</div>}
       </div>
 
-      {/* Infos */}
       <div className="p-2">
         <div className="font-semibold text-xs leading-tight truncate" title={fighter.name}>
           {fighter.country_flag && <span className="mr-0.5">{fighter.country_flag}</span>}
           {fighter.name}
         </div>
-        {fighter.nickname && (
-          <div className="text-white/30 text-xs italic truncate">"{fighter.nickname}"</div>
-        )}
-        <div className="text-white/40 font-mono text-xs mt-0.5">
-          {fighter.wins}-{fighter.losses}-{fighter.draws}
-        </div>
-        {fighter.weight_class && (
-          <div className="text-white/25 text-xs truncate leading-tight">{fighter.weight_class}</div>
-        )}
-
-        {error && (
-          <div className="text-red-400 text-xs mt-1 leading-tight">{error}</div>
-        )}
-
-        {/* Bouton supprimer photo */}
+        {fighter.nickname && <div className="text-white/30 text-xs italic truncate">"{fighter.nickname}"</div>}
+        <div className="text-white/40 font-mono text-xs mt-0.5">{fighter.wins}-{fighter.losses}-{fighter.draws}</div>
+        {fighter.weight_class && <div className="text-white/25 text-xs truncate leading-tight">{fighter.weight_class}</div>}
+        {error && <div className="text-red-400 text-xs mt-1 leading-tight">{error}</div>}
         {photoUrl && !uploading && (
-          <button
-            onClick={e => { e.stopPropagation(); onRemove(fighter) }}
-            className="mt-1 text-white/20 hover:text-red-400 text-xs transition-colors"
-          >
-            Supprimer
+          <button onClick={e => { e.stopPropagation(); onRemove(fighter) }}
+            className="mt-1 text-white/20 hover:text-red-400 text-xs transition-colors">
+            {fr ? 'Supprimer' : 'Remove'}
           </button>
         )}
       </div>
-
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/*"
-        onChange={handleChange}
-        className="hidden"
-      />
+      <input ref={fileRef} type="file" accept="image/*" onChange={handleChange} className="hidden" />
     </div>
   )
 }
