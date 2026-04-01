@@ -2,12 +2,16 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import FighterForm from '@/components/fighters/FighterForm'
+import { getLocale } from '@/lib/i18n/server'
+import { translations } from '@/lib/i18n/translations'
 
 export default async function EditFighterPage({ params }: { params: { id: string } }) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user!.id).single()
   if (!profile?.is_admin) redirect('/dashboard')
+  const locale = getLocale()
+  const t = translations[locale]
 
   const { data: fighter } = await supabase.from('fighters').select('*').eq('id', params.id).single()
   if (!fighter) notFound()
@@ -15,7 +19,7 @@ export default async function EditFighterPage({ params }: { params: { id: string
   return (
     <div className="animate-fade-in">
       <div className="flex items-center gap-2 mb-6">
-        <Link href="/fighters" className="text-white/40 hover:text-white text-xs uppercase tracking-widest transition-colors">Combattants</Link>
+        <Link href="/fighters" className="text-white/40 hover:text-white text-xs uppercase tracking-widest transition-colors">{t.nav.fighters}</Link>
         <span className="text-white/20 text-xs">/</span>
         <span className="text-white/60 text-xs uppercase tracking-widest">{fighter.name}</span>
       </div>
@@ -30,7 +34,7 @@ export default async function EditFighterPage({ params }: { params: { id: string
           {fighter.nickname && <p className="text-white/40 text-sm italic">"{fighter.nickname}"</p>}
         </div>
       </div>
-      <FighterForm existing={fighter} />
+      <FighterForm existing={fighter} locale={locale} />
     </div>
   )
 }

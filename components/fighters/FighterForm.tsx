@@ -9,7 +9,6 @@ const WEIGHT_CLASSES = [
   'Lightweight', 'Featherweight', 'Bantamweight', 'Flyweight',
   "Women's Featherweight", "Women's Bantamweight", "Women's Flyweight", "Women's Strawweight",
 ]
-
 const STANCES = ['Orthodox', 'Southpaw', 'Switch']
 
 type FighterData = {
@@ -28,9 +27,9 @@ const empty: FighterData = {
   stance: '', weight_class: 'Heavyweight', ranking: '', is_champion: false,
 }
 
-type Props = { existing?: any }
+type Props = { existing?: any; locale?: string }
 
-export default function FighterForm({ existing }: Props) {
+export default function FighterForm({ existing, locale = 'fr' }: Props) {
   const router = useRouter()
   const fileRef = useRef<HTMLInputElement>(null)
   const [form, setForm] = useState<FighterData>(existing ? {
@@ -56,7 +55,7 @@ export default function FighterForm({ existing }: Props) {
   }
 
   const handleSubmit = async () => {
-    if (!form.name.trim()) { setError('Le nom est obligatoire'); return }
+    if (!form.name.trim()) { setError(locale === 'fr' ? 'Le nom est obligatoire' : 'Name is required'); return }
     setLoading(true); setError('')
     const supabase = createClient()
     let photo_url = existing?.photo_url ?? null
@@ -65,7 +64,7 @@ export default function FighterForm({ existing }: Props) {
       const ext = photo.name.split('.').pop()
       const path = `${Date.now()}-${form.name.toLowerCase().replace(/\s+/g, '-')}.${ext}`
       const { error: uploadErr } = await supabase.storage.from('fighters').upload(path, photo, { upsert: true })
-      if (uploadErr) { setError('Erreur upload photo : ' + uploadErr.message); setLoading(false); return }
+      if (uploadErr) { setError('Upload error: ' + uploadErr.message); setLoading(false); return }
       const { data: urlData } = supabase.storage.from('fighters').getPublicUrl(path)
       photo_url = urlData.publicUrl
     }
@@ -99,6 +98,8 @@ export default function FighterForm({ existing }: Props) {
       value={form[field] as number} onChange={e => update(field, Number(e.target.value))} />
   )
 
+  const fr = locale === 'fr'
+
   return (
     <div className="space-y-6 max-w-2xl">
       {/* Photo */}
@@ -116,11 +117,13 @@ export default function FighterForm({ existing }: Props) {
           </div>
           <div className="space-y-2">
             <button type="button" onClick={() => fileRef.current?.click()} className="btn-secondary text-xs py-2">
-              {photoPreview ? 'Changer la photo' : 'Ajouter une photo'}
+              {photoPreview ? (fr ? 'Changer la photo' : 'Change photo') : (fr ? 'Ajouter une photo' : 'Add photo')}
             </button>
             {photoPreview && (
               <button type="button" onClick={() => { setPhoto(null); setPhotoPreview('') }}
-                className="block text-white/40 text-xs hover:text-white transition-colors">Supprimer</button>
+                className="block text-white/40 text-xs hover:text-white transition-colors">
+                {fr ? 'Supprimer' : 'Remove'}
+              </button>
             )}
             <p className="text-white/30 text-xs">JPG, PNG — max 5MB</p>
           </div>
@@ -128,48 +131,48 @@ export default function FighterForm({ existing }: Props) {
         <input ref={fileRef} type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
       </div>
 
-      {/* Identité */}
+      {/* Identity */}
       <div className="card space-y-4">
-        <h3 className="font-display text-xl tracking-wider">IDENTITÉ</h3>
+        <h3 className="font-display text-xl tracking-wider">{fr ? 'IDENTITÉ' : 'IDENTITY'}</h3>
         <div className="grid grid-cols-2 gap-4">
           <div className="col-span-2">
-            <label className="label">Nom complet *</label>
+            <label className="label">{fr ? 'Nom complet *' : 'Full name *'}</label>
             <input className="input" placeholder="Jon Jones" value={form.name} onChange={e => update('name', e.target.value)} />
           </div>
           <div className="col-span-2">
-            <label className="label">Surnom</label>
+            <label className="label">{fr ? 'Surnom' : 'Nickname'}</label>
             <input className="input" placeholder="Bones" value={form.nickname} onChange={e => update('nickname', e.target.value)} />
           </div>
           <div>
-            <label className="label">Pays</label>
+            <label className="label">{fr ? 'Pays' : 'Country'}</label>
             <input className="input" placeholder="United States" value={form.country} onChange={e => update('country', e.target.value)} />
           </div>
           <div>
-            <label className="label">Drapeau (emoji)</label>
+            <label className="label">{fr ? 'Drapeau (emoji)' : 'Flag (emoji)'}</label>
             <input className="input text-2xl" placeholder="🇺🇸" value={form.country_flag} onChange={e => update('country_flag', e.target.value)} maxLength={4} />
           </div>
         </div>
       </div>
 
-      {/* Catégorie */}
+      {/* Division */}
       <div className="card space-y-4">
-        <h3 className="font-display text-xl tracking-wider">CATÉGORIE</h3>
+        <h3 className="font-display text-xl tracking-wider">{fr ? 'CATÉGORIE' : 'DIVISION'}</h3>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="label">Catégorie de poids</label>
+            <label className="label">{fr ? 'Catégorie de poids' : 'Weight class'}</label>
             <select className="input" value={form.weight_class} onChange={e => update('weight_class', e.target.value)}>
               {WEIGHT_CLASSES.map(w => <option key={w}>{w}</option>)}
             </select>
           </div>
           <div>
-            <label className="label">Classement</label>
+            <label className="label">{fr ? 'Classement' : 'Ranking'}</label>
             <input className="input" type="number" min={1} max={15} placeholder="1"
               value={form.ranking} onChange={e => update('ranking', e.target.value)} />
           </div>
         </div>
         <label className="flex items-center gap-3 cursor-pointer">
           <input type="checkbox" checked={form.is_champion} onChange={e => update('is_champion', e.target.checked)} className="w-4 h-4" />
-          <span className="text-sm font-semibold tracking-wide">Champion en titre</span>
+          <span className="text-sm font-semibold tracking-wide">{fr ? 'Champion en titre' : 'Current champion'}</span>
           {form.is_champion && <span className="badge-gold">C</span>}
         </label>
       </div>
@@ -178,40 +181,58 @@ export default function FighterForm({ existing }: Props) {
       <div className="card space-y-4">
         <h3 className="font-display text-xl tracking-wider">RECORD</h3>
         <div className="grid grid-cols-4 gap-3">
-          <div><label className="label text-center block">Victoires</label>{num('wins')}</div>
-          <div><label className="label text-center block">Défaites</label>{num('losses')}</div>
-          <div><label className="label text-center block">Nuls</label>{num('draws')}</div>
+          <div><label className="label text-center block">{fr ? 'Victoires' : 'Wins'}</label>{num('wins')}</div>
+          <div><label className="label text-center block">{fr ? 'Défaites' : 'Losses'}</label>{num('losses')}</div>
+          <div><label className="label text-center block">{fr ? 'Nuls' : 'Draws'}</label>{num('draws')}</div>
           <div><label className="label text-center block">NC</label>{num('no_contests')}</div>
         </div>
         <div className="divider" />
-        <p className="text-white/40 text-xs uppercase tracking-widest">Détail des victoires</p>
+        <p className="text-white/40 text-xs uppercase tracking-widest">{fr ? 'Détail des victoires' : 'Win breakdown'}</p>
         <div className="grid grid-cols-3 gap-3">
           <div><label className="label text-center block">KO/TKO</label>{num('wins_ko')}</div>
           <div><label className="label text-center block">Submission</label>{num('wins_sub')}</div>
-          <div><label className="label text-center block">Décision</label>{num('wins_dec')}</div>
+          <div><label className="label text-center block">{fr ? 'Décision' : 'Decision'}</label>{num('wins_dec')}</div>
         </div>
       </div>
 
-      {/* Physique */}
+      {/* Physical — stored in metric, displayed per locale */}
       <div className="card space-y-4">
-        <h3 className="font-display text-xl tracking-wider">PHYSIQUE</h3>
+        <h3 className="font-display text-xl tracking-wider">{fr ? 'PHYSIQUE' : 'PHYSICAL'}</h3>
+        <p className="text-white/40 text-xs">{fr ? 'Valeurs stockées en cm / kg' : 'Values stored in cm / kg (converted for display)'}</p>
         <div className="grid grid-cols-3 gap-4">
-          <div><label className="label">Taille (cm)</label>
-            <input className="input" type="number" placeholder="193" value={form.height_cm} onChange={e => update('height_cm', e.target.value)} /></div>
-          <div><label className="label">Poids (kg)</label>
-            <input className="input" type="number" placeholder="120" value={form.weight_kg} onChange={e => update('weight_kg', e.target.value)} /></div>
-          <div><label className="label">Allonge (cm)</label>
-            <input className="input" type="number" placeholder="215" value={form.reach_cm} onChange={e => update('reach_cm', e.target.value)} /></div>
+          <div>
+            <label className="label">{fr ? 'Taille (cm)' : 'Height (cm)'}</label>
+            {form.height_cm && !fr && (
+              <p className="text-white/30 text-xs mb-1">
+                ≈ {(() => { const i = Math.round(Number(form.height_cm)/2.54); return `${Math.floor(i/12)}'${i%12}"` })()}
+              </p>
+            )}
+            <input className="input" type="number" placeholder="193" value={form.height_cm} onChange={e => update('height_cm', e.target.value)} />
+          </div>
+          <div>
+            <label className="label">{fr ? 'Poids (kg)' : 'Weight (kg)'}</label>
+            {form.weight_kg && !fr && (
+              <p className="text-white/30 text-xs mb-1">≈ {Math.round(Number(form.weight_kg) * 2.20462)} lbs</p>
+            )}
+            <input className="input" type="number" placeholder="120" value={form.weight_kg} onChange={e => update('weight_kg', e.target.value)} />
+          </div>
+          <div>
+            <label className="label">{fr ? 'Allonge (cm)' : 'Reach (cm)'}</label>
+            {form.reach_cm && !fr && (
+              <p className="text-white/30 text-xs mb-1">≈ {Math.round(Number(form.reach_cm) / 2.54)}"</p>
+            )}
+            <input className="input" type="number" placeholder="215" value={form.reach_cm} onChange={e => update('reach_cm', e.target.value)} />
+          </div>
         </div>
         <div>
-          <label className="label">Garde</label>
+          <label className="label">{fr ? 'Garde' : 'Stance'}</label>
           <div className="flex gap-2">
             {['', ...STANCES].map(s => (
               <button key={s} type="button" onClick={() => update('stance', s)}
                 className={`py-1.5 px-3 border text-sm font-mono transition-all ${
                   form.stance === s ? 'border-blood-500 bg-blood-500/10 text-white' : 'border-octagon-600 text-white/40 hover:text-white'
                 }`}>
-                {s || 'Non défini'}
+                {s || (fr ? 'Non défini' : 'Unknown')}
               </button>
             ))}
           </div>
@@ -221,9 +242,15 @@ export default function FighterForm({ existing }: Props) {
       {error && <p className="text-red-400 text-sm">{error}</p>}
       <div className="flex gap-3">
         <button onClick={handleSubmit} disabled={loading} className="btn-gold py-4 px-8 disabled:opacity-50">
-          {loading ? 'Enregistrement...' : existing ? 'Mettre à jour' : 'Créer le combattant'}
+          {loading
+            ? (fr ? 'Enregistrement...' : 'Saving...')
+            : existing
+            ? (fr ? 'Mettre à jour' : 'Update fighter')
+            : (fr ? 'Créer le combattant' : 'Create fighter')}
         </button>
-        <button onClick={() => router.back()} className="btn-secondary py-4 px-6">Annuler</button>
+        <button onClick={() => router.back()} className="btn-secondary py-4 px-6">
+          {fr ? 'Annuler' : 'Cancel'}
+        </button>
       </div>
     </div>
   )
