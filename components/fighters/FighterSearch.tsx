@@ -3,14 +3,9 @@
 import { useState, useRef, useEffect } from 'react'
 
 type Fighter = {
-  id: string
-  name: string
-  photo_url?: string | null
-  weight_class?: string | null
-  country_flag?: string | null
-  wins?: number
-  losses?: number
-  draws?: number
+  id: string; name: string; photo_url?: string | null
+  weight_class?: string | null; country_flag?: string | null
+  wins?: number; losses?: number; draws?: number
 }
 
 type Props = {
@@ -19,15 +14,17 @@ type Props = {
   onChange: (fighterId: string | null, fighter: Fighter | null) => void
   placeholder?: string
   label?: string
+  locale?: string
 }
 
-export default function FighterSearch({ fighters, value, onChange, placeholder = 'Rechercher un combattant...', label }: Props) {
+export default function FighterSearch({ fighters, value, onChange, placeholder, label, locale = 'fr' }: Props) {
+  const fr = locale === 'fr'
+  const defaultPlaceholder = placeholder ?? (fr ? 'Rechercher un combattant...' : 'Search a fighter...')
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
   const selected = value ? fighters.find(f => f.id === value) ?? null : null
-
   const filtered = query.trim().length > 0
     ? fighters.filter(f => f.name.toLowerCase().includes(query.toLowerCase())).slice(0, 8)
     : fighters.slice(0, 8)
@@ -55,7 +52,6 @@ export default function FighterSearch({ fighters, value, onChange, placeholder =
     <div ref={ref} className="relative">
       {label && <label className="label">{label}</label>}
 
-      {/* Fighter sélectionné */}
       {selected ? (
         <div className="flex items-center gap-3 bg-octagon-700 border border-blood-500/50 p-3">
           <div className="w-10 h-10 rounded-full overflow-hidden border border-octagon-600 bg-octagon-600 flex-shrink-0">
@@ -74,44 +70,34 @@ export default function FighterSearch({ fighters, value, onChange, placeholder =
             </div>
             <div className="text-white/40 text-xs">
               {selected.weight_class && <span>{selected.weight_class}</span>}
-              {(selected.wins !== undefined) && (
+              {selected.wins !== undefined && (
                 <span className="ml-2 font-mono">{selected.wins}-{selected.losses}-{selected.draws}</span>
               )}
             </div>
           </div>
-          <button
-            type="button"
-            onClick={handleClear}
-            className="text-white/40 hover:text-white text-xs uppercase tracking-widest transition-colors flex-shrink-0"
-          >
-            Changer
+          <button type="button" onClick={handleClear}
+            className="text-white/40 hover:text-white text-xs uppercase tracking-widest transition-colors flex-shrink-0">
+            {fr ? 'Changer' : 'Change'}
           </button>
         </div>
       ) : (
-        /* Champ de recherche */
         <div>
           <input
-            type="text"
-            className="input"
-            placeholder={placeholder}
+            type="text" className="input" placeholder={defaultPlaceholder}
             value={query}
             onChange={e => { setQuery(e.target.value); setOpen(true) }}
             onFocus={() => setOpen(true)}
           />
-
-          {/* Dropdown résultats */}
           {open && (
             <div className="absolute z-50 top-full left-0 right-0 bg-octagon-800 border border-octagon-600 border-t-0 max-h-64 overflow-y-auto">
               {filtered.length === 0 ? (
-                <div className="p-4 text-white/40 text-sm text-center">Aucun combattant trouvé</div>
+                <div className="p-4 text-white/40 text-sm text-center">
+                  {fr ? 'Aucun combattant trouvé' : 'No fighter found'}
+                </div>
               ) : (
                 filtered.map(fighter => (
-                  <button
-                    key={fighter.id}
-                    type="button"
-                    onClick={() => handleSelect(fighter)}
-                    className="w-full flex items-center gap-3 p-3 hover:bg-octagon-700 transition-colors text-left"
-                  >
+                  <button key={fighter.id} type="button" onClick={() => handleSelect(fighter)}
+                    className="w-full flex items-center gap-3 p-3 hover:bg-octagon-700 transition-colors text-left">
                     <div className="w-9 h-9 rounded-full overflow-hidden border border-octagon-600 bg-octagon-700 flex-shrink-0">
                       {fighter.photo_url ? (
                         <img src={fighter.photo_url} alt={fighter.name} className="w-full h-full object-cover object-top" />
