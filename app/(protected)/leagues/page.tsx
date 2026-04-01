@@ -2,28 +2,28 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import CreateLeagueForm from '@/components/leagues/CreateLeagueForm'
 import JoinLeagueForm from '@/components/leagues/JoinLeagueForm'
+import { getLocale } from '@/lib/i18n/server'
+import { translations } from '@/lib/i18n/translations'
 
 export default async function LeaguesPage() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  const locale = getLocale()
+  const t = translations[locale]
 
   const { data: myLeagues } = await supabase
     .from('league_members')
-    .select(`
-      joined_at,
-      leagues (
-        id, name, description, invite_code, owner_id,
-        league_members(count)
-      )
-    `)
+    .select('joined_at, leagues(id, name, description, invite_code, owner_id, league_members(count))')
     .eq('user_id', user!.id)
     .order('joined_at', { ascending: false })
 
   return (
     <div className="space-y-8 animate-fade-in">
       <div className="flex items-center justify-between">
-        <h1 className="font-display text-5xl tracking-wider">MES LIGUES</h1>
-        <span className="text-octagon-600 font-mono text-sm">{myLeagues?.length ?? 0} ligue(s)</span>
+        <h1 className="font-display text-5xl tracking-wider">{t.leagues.title}</h1>
+        <span className="text-white/40 font-mono text-sm">
+          {myLeagues?.length ?? 0} {t.leagues.members.replace('membres', locale === 'fr' ? 'ligue(s)' : 'league(s)')}
+        </span>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -39,11 +39,7 @@ export default async function LeaguesPage() {
             const league = m.leagues
             const isOwner = league.owner_id === user!.id
             return (
-              <Link
-                key={league.id}
-                href={`/leagues/${league.id}`}
-                className="card-hover group"
-              >
+              <Link key={league.id} href={`/leagues/${league.id}`} className="card-hover group">
                 <div className="flex items-start justify-between mb-3">
                   <h3 className="font-display text-2xl tracking-wider group-hover:text-blood-400 transition-colors">
                     {league.name}
@@ -51,14 +47,14 @@ export default async function LeaguesPage() {
                   {isOwner && <span className="badge-gold text-xs">ADMIN</span>}
                 </div>
                 {league.description && (
-                  <p className="text-octagon-600 text-sm mb-3 tracking-wide">{league.description}</p>
+                  <p className="text-white/40 text-sm mb-3 tracking-wide">{league.description}</p>
                 )}
                 <div className="flex items-center justify-between mt-4">
-                  <span className="text-octagon-600 text-xs font-mono">
-                    {league.league_members?.[0]?.count ?? 0} membre(s)
+                  <span className="text-white/40 text-xs font-mono">
+                    {league.league_members?.[0]?.count ?? 0} {t.leagues.members}
                   </span>
-                  <span className="text-octagon-600 font-mono text-xs tracking-widest border border-octagon-600 px-2 py-0.5">
-                    #{league.invite_code}
+                  <span className="text-white/40 font-mono text-xs tracking-widest border border-octagon-600 px-2 py-0.5">
+                    {league.invite_code}
                   </span>
                 </div>
               </Link>
@@ -66,9 +62,11 @@ export default async function LeaguesPage() {
           })}
         </div>
       ) : (
-        <div className="text-center py-16">
-          <p className="font-display text-4xl text-octagon-700 mb-4">AUCUNE LIGUE</p>
-          <p className="text-octagon-600 text-sm tracking-wide">Crée ou rejoins une ligue pour commencer à pronostiquer</p>
+        <div className="text-center py-12">
+          <p className="font-display text-3xl text-white/20 mb-2">
+            {locale === 'fr' ? 'AUCUNE LIGUE' : 'NO LEAGUES'}
+          </p>
+          <p className="text-white/40 text-sm">{t.dashboard.joinOrCreate}</p>
         </div>
       )}
     </div>

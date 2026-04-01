@@ -1,11 +1,16 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { format } from 'date-fns'
-import { fr } from 'date-fns/locale'
+import { fr, enUS } from 'date-fns/locale'
+import { getLocale } from '@/lib/i18n/server'
+import { translations } from '@/lib/i18n/translations'
 
 export default async function DashboardPage() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  const locale = getLocale()
+  const t = translations[locale]
+  const dateLocale = locale === 'fr' ? fr : enUS
 
   const [{ data: profile }, { data: leagues }, { data: nextEvent }, { data: recentPredictions }] =
     await Promise.all([
@@ -19,94 +24,110 @@ export default async function DashboardPage() {
         .limit(5),
     ])
 
+  const userLeagues = (leagues ?? []).map((m: any) => m.leagues).filter(Boolean)
+
   return (
     <div className="space-y-8 animate-fade-in">
-      {/* Header */}
       <div>
-        <p className="text-octagon-600 text-sm uppercase tracking-widest mb-1">Bienvenue,</p>
+        <p className="text-white/40 text-sm uppercase tracking-widest mb-1">
+          {locale === 'fr' ? 'Bienvenue,' : 'Welcome,'}
+        </p>
         <h1 className="font-display text-5xl tracking-wider">
           {profile?.username ?? 'Champion'}
         </h1>
       </div>
 
-      {/* Next event CTA */}
       {nextEvent && (
         <div className="relative bg-octagon-800 border border-blood-500 p-6 overflow-hidden glow-red">
           <div className="absolute top-0 right-0 w-48 h-48 bg-blood-500 opacity-5 blur-3xl" />
-          <div className="badge-red mb-3 inline-flex">PROCHAIN ÉVÉNEMENT</div>
+          <div className="badge-red mb-3 inline-flex">
+            {locale === 'fr' ? 'PROCHAIN ÉVÉNEMENT' : 'NEXT EVENT'}
+          </div>
           <h2 className="font-display text-3xl tracking-wider mb-1">{nextEvent.name}</h2>
-          <p className="text-octagon-600 text-sm tracking-wide mb-4">
-            {format(new Date(nextEvent.date), "d MMMM yyyy — HH'h'mm", { locale: fr })} · {nextEvent.location}
+          <p className="text-white/40 text-sm tracking-wide mb-4">
+            {format(new Date(nextEvent.date), locale === 'fr' ? "d MMMM yyyy — HH'h'mm" : "MMMM d, yyyy — h:mm a", { locale: dateLocale })} · {nextEvent.location}
           </p>
-          <p className="text-octagon-600 text-xs mb-4">
-            Deadline pronostics :{' '}
+          <p className="text-white/40 text-xs mb-4">
+            {locale === 'fr' ? 'Deadline pronostics :' : 'Prediction deadline:'}{' '}
             <span className="text-gold-400">
-              {format(new Date(nextEvent.prediction_deadline), "d MMM yyyy à HH'h'mm", { locale: fr })}
+              {format(new Date(nextEvent.prediction_deadline), locale === 'fr' ? "d MMM yyyy à HH'h'mm" : "MMM d, yyyy at h:mm a", { locale: dateLocale })}
             </span>
           </p>
           <Link href={`/events/${nextEvent.id}`} className="btn-primary inline-flex">
-            Voir les combats →
+            {locale === 'fr' ? 'Voir les combats →' : 'View fights →'}
           </Link>
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Mes ligues */}
-        <div className="card">
-          <div className="flex items-center justify-between mb-5">
-            <h3 className="font-display text-2xl tracking-wider">MES LIGUES</h3>
-            <Link href="/leagues" className="text-blood-400 hover:text-blood-300 text-xs uppercase tracking-widest transition-colors">
-              Voir tout →
+      <div className="grid md:grid-cols-2 gap-6">
+        {/* Ligues */}
+        <div className="card space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="font-display text-2xl tracking-wider">{t.dashboard.myLeagues}</h2>
+            <Link href="/leagues" className="text-white/40 text-xs hover:text-white transition-colors uppercase tracking-widest">
+              {locale === 'fr' ? 'Voir tout →' : 'View all →'}
             </Link>
           </div>
-          {leagues && leagues.length > 0 ? (
-            <div className="space-y-3">
-              {leagues.map((m: any) => (
-                <Link
-                  key={m.leagues?.id}
-                  href={`/leagues/${m.leagues?.id}`}
-                  className="flex items-center justify-between p-3 bg-octagon-700 hover:bg-octagon-600 border border-octagon-600 hover:border-blood-500 transition-all"
-                >
-                  <span className="font-semibold tracking-wide">{m.leagues?.name}</span>
-                  <span className="text-octagon-600 text-xs">→</span>
-                </Link>
-              ))}
+          {userLeagues.length === 0 ? (
+            <div className="text-center py-6">
+              <p className="text-white/40 text-sm mb-4">{t.dashboard.joinOrCreate}</p>
+              <div className="flex gap-2 justify-center">
+                <Link href="/leagues" className="btn-primary text-sm py-2">{t.dashboard.createLeague}</Link>
+                <Link href="/leagues" className="btn-secondary text-sm py-2">{t.dashboard.joinLeague}</Link>
+              </div>
             </div>
           ) : (
-            <div className="text-center py-8">
-              <p className="text-octagon-600 text-sm mb-4">Aucune ligue rejointe</p>
-              <Link href="/leagues" className="btn-secondary text-xs py-2 px-4">
-                Créer ou rejoindre
+            <div className="space-y-2">
+              {userLeagues.map((league: any) => (
+                <Link key={league.id} href={`/leagues/${league.id}`}
+                  className="flex items-center justify-between p-3 bg-octagon-700 border border-octagon-600 hover:border-blood-500/50 transition-all">
+                  <span className="font-semibold text-sm">{league.name}</span>
+                  <span className="text-white/30 text-xs">→</span>
+                </Link>
+              ))}
+              <Link href="/leagues" className="block text-center text-white/40 text-xs hover:text-white transition-colors pt-2 uppercase tracking-widest">
+                {locale === 'fr' ? '+ Rejoindre une ligue' : '+ Join a league'}
               </Link>
             </div>
           )}
         </div>
 
-        {/* Derniers pronostics */}
-        <div className="card">
-          <h3 className="font-display text-2xl tracking-wider mb-5">DERNIERS PRONOSTICS</h3>
-          {recentPredictions && recentPredictions.length > 0 ? (
-            <div className="space-y-3">
-              {recentPredictions.map((p: any) => (
-                <div key={p.id} className="p-3 bg-octagon-700 border border-octagon-600">
-                  <div className="text-xs text-octagon-600 mb-1">{p.fights?.ufc_events?.name}</div>
-                  <div className="font-semibold text-sm tracking-wide">
-                    {p.fights?.fighter1_name} vs {p.fights?.fighter2_name}
-                  </div>
-                  <div className="flex gap-2 mt-2">
-                    <span className="badge-gray">{p.predicted_winner === 'fighter1' ? p.fights?.fighter1_name : p.predicted_winner === 'fighter2' ? p.fights?.fighter2_name : 'Draw'}</span>
-                    <span className="badge-gray">{p.predicted_method}</span>
-                    <span className="badge-gray">R{p.predicted_round}</span>
-                    {p.points_earned !== null && (
-                      <span className="badge-gold">{p.points_earned} pts</span>
-                    )}
-                  </div>
-                </div>
-              ))}
+        {/* Pronostics récents */}
+        <div className="card space-y-4">
+          <h2 className="font-display text-2xl tracking-wider">{t.dashboard.myPredictions}</h2>
+          {(!recentPredictions || recentPredictions.length === 0) ? (
+            <div className="text-center py-6">
+              <p className="text-white/40 text-sm">
+                {locale === 'fr' ? 'Aucun pronostic pour l\'instant' : 'No predictions yet'}
+              </p>
             </div>
           ) : (
-            <div className="text-center py-8">
-              <p className="text-octagon-600 text-sm">Aucun pronostic encore posé</p>
+            <div className="space-y-2">
+              {recentPredictions.map((pred: any) => {
+                const fight = pred.fights
+                const event = fight?.ufc_events
+                return (
+                  <div key={pred.id} className="p-3 bg-octagon-700 border border-octagon-600 text-sm">
+                    <div className="text-white/40 text-xs mb-1">{event?.name}</div>
+                    <div className="font-semibold">
+                      {fight?.fighter1_name} vs {fight?.fighter2_name}
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-white/40 text-xs">
+                        {locale === 'fr' ? 'Pronostic :' : 'Pick:'}{' '}
+                        {pred.predicted_winner === 'fighter1' ? fight?.fighter1_name
+                          : pred.predicted_winner === 'fighter2' ? fight?.fighter2_name
+                          : (locale === 'fr' ? 'Match nul' : 'Draw')}
+                      </span>
+                      {pred.points_earned !== null && (
+                        <span className={`font-mono text-xs ${pred.points_earned === 30 ? 'text-gold-400' : pred.points_earned > 0 ? 'text-emerald-400' : 'text-white/30'}`}>
+                          {pred.points_earned} {t.dashboard.points}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>

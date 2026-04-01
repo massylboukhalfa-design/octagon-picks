@@ -10,9 +10,10 @@ type Props = {
   userId: string
   userLeagues: { id: string; name: string }[]
   existing?: any
+  locale?: string
 }
 
-export default function PredictionForm({ fight, userId, userLeagues, existing }: Props) {
+export default function PredictionForm({ fight, userId, userLeagues, existing, locale = 'fr' }: Props) {
   const [winner, setWinner] = useState<'fighter1' | 'fighter2' | 'draw' | ''>(existing?.predicted_winner ?? '')
   const [method, setMethod] = useState<FightMethod | ''>(existing?.predicted_method ?? '')
   const [round, setRound] = useState<number>(existing?.predicted_round ?? 0)
@@ -115,23 +116,27 @@ export default function PredictionForm({ fight, userId, userLeagues, existing }:
     <div className="border-t border-octagon-700 pt-4 mt-2">
       <div className="flex items-center justify-between mb-4">
         <div className="text-xs uppercase tracking-widest text-white/40">
-          {existing ? 'Modifier ton pronostic' : 'Ton pronostic'}
+          {existing
+            ? (locale === 'fr' ? 'Modifier ton pronostic' : 'Edit your pick')
+            : (locale === 'fr' ? 'Ton pronostic' : 'Your pick')}
         </div>
         {userLeagues.length > 0 && !existing && (
           <div className="text-xs text-white/30">
-            Valable dans {userLeagues.length} ligue{userLeagues.length > 1 ? 's' : ''}
+            {locale === 'fr'
+              ? `Valable dans ${userLeagues.length} ligue${userLeagues.length > 1 ? 's' : ''}`
+              : `Valid in ${userLeagues.length} league${userLeagues.length > 1 ? 's' : ''}`}
           </div>
         )}
       </div>
 
       {/* Winner */}
       <div className="mb-4">
-        <label className="label">Vainqueur</label>
+        <label className="label">{locale === 'fr' ? 'Vainqueur' : 'Winner'}</label>
         <div className="grid grid-cols-3 gap-2">
           {([
             { value: 'fighter1', label: fight.fighter1_name, form: fight.fighter1?.form ?? fight.fighter1_form },
             { value: 'fighter2', label: fight.fighter2_name, form: fight.fighter2?.form ?? fight.fighter2_form },
-            { value: 'draw', label: 'Match nul', form: null },
+            { value: 'draw', label: locale === 'fr' ? 'Match nul' : 'Draw', form: null },
           ] as const).map(opt => (
             <button
               key={opt.value}
@@ -155,7 +160,7 @@ export default function PredictionForm({ fight, userId, userLeagues, existing }:
 
       {/* Method */}
       <div className="mb-4">
-        <label className="label">Méthode</label>
+        <label className="label">{locale === 'fr' ? 'Méthode' : 'Method'}</label>
         <div className="flex flex-wrap gap-2">
           {FIGHT_METHODS.map(m => (
             <button
@@ -173,7 +178,7 @@ export default function PredictionForm({ fight, userId, userLeagues, existing }:
         </div>
       </div>
 
-      {/* Round — masqué si Decision ou Match nul */}
+      {/* Round */}
       {!isAutoRound ? (
         <div className="mb-5">
           <label className="label">Round</label>
@@ -197,8 +202,10 @@ export default function PredictionForm({ fight, userId, userLeagues, existing }:
         <div className="mb-5 px-3 py-2 bg-octagon-700 border border-octagon-600 inline-flex items-center gap-2">
           <span className="text-white/40 text-xs uppercase tracking-widest">Round</span>
           <span className="text-white/60 text-sm font-mono">
-            R{fight.scheduled_rounds} — automatique
-            {isDraw ? ' (match nul)' : ' (décision)'}
+            R{fight.scheduled_rounds} — {locale === 'fr' ? 'automatique' : 'automatic'}
+            {isDraw
+              ? (locale === 'fr' ? ' (match nul)' : ' (draw)')
+              : (locale === 'fr' ? ' (décision)' : ' (decision)')}
           </span>
         </div>
       )}
@@ -210,7 +217,13 @@ export default function PredictionForm({ fight, userId, userLeagues, existing }:
         disabled={loading}
         className={`${saved ? 'btn-secondary border-emerald-700 text-emerald-400' : 'btn-primary'} disabled:opacity-50`}
       >
-        {loading ? 'Enregistrement...' : saved ? '✓ Pronostic enregistré' : existing ? 'Modifier le pronostic' : 'Enregistrer le pronostic'}
+        {loading
+          ? (locale === 'fr' ? 'Enregistrement...' : 'Saving...')
+          : saved
+          ? (locale === 'fr' ? '✓ Pronostic enregistré' : '✓ Pick saved')
+          : existing
+          ? (locale === 'fr' ? 'Modifier le pronostic' : 'Update pick')
+          : (locale === 'fr' ? 'Enregistrer le pronostic' : 'Save pick')}
       </button>
     </div>
   )

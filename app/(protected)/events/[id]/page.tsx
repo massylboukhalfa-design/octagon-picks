@@ -2,10 +2,12 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { format } from 'date-fns'
-import { fr } from 'date-fns/locale'
+import { fr, enUS } from 'date-fns/locale'
 import PredictionForm from '@/components/events/PredictionForm'
 import FighterCard from '@/components/fighters/FighterCard'
 import FighterFormBadge from '@/components/fighters/FighterFormBadge'
+import { getLocale } from '@/lib/i18n/server'
+import { translations } from '@/lib/i18n/translations'
 
 export default async function EventDetailPage({
   params,
@@ -14,6 +16,9 @@ export default async function EventDetailPage({
 }) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  const locale = getLocale()
+  const t = translations[locale]
+  const dateLocale = locale === 'fr' ? fr : enUS
 
   const { data: event } = await supabase
     .from('ufc_events')
@@ -30,14 +35,12 @@ export default async function EventDetailPage({
     .order('is_main_event', { ascending: false })
     .order('card_order', { ascending: false })
 
-  // Pronostics existants de l'utilisateur pour cet event
   const { data: existingPredictions } = await supabase
     .from('predictions')
     .select('*')
     .eq('user_id', user!.id)
     .in('fight_id', (fights ?? []).map(f => f.id))
 
-  // Ligues de l'utilisateur
   const { data: userLeaguesRaw } = await supabase
     .from('league_members')
     .select('leagues(id, name)')
@@ -50,7 +53,6 @@ export default async function EventDetailPage({
   const isOpen = event.status === 'upcoming' && new Date() < new Date(event.prediction_deadline)
   const isCompleted = event.status === 'completed'
 
-  // On prend le premier prono par fight_id (un seul prono par combat maintenant)
   const predictionMap = Object.fromEntries(
     (existingPredictions ?? []).map(p => [p.fight_id, p])
   )
@@ -60,9 +62,9 @@ export default async function EventDetailPage({
       {/* Header */}
       <div>
         <div className="flex items-center gap-2 mb-3">
-          <Link href="/dashboard" className="text-white/40 hover:text-white text-xs uppercase tracking-widest transition-colors">Dashboard</Link>
+          <Link href="/dashboard" className="text-white/40 hover:text-white text-xs uppercase tracking-widest transition-colors">{t.nav.dashboard}</Link>
           <span className="text-white/20 text-xs">/</span>
-          <Link href="/events" className="text-white/40 hover:text-white text-xs uppercase tracking-widest transition-colors">Événements</Link>
+          <Link href="/events" className="text-white/40 hover:text-white text-xs uppercase tracking-widest transition-colors">{t.nav.events}</Link>
           <span className="text-white/20 text-xs">/</span>
           <span className="text-white/60 text-xs uppercase tracking-widest truncate max-w-[200px]">{event.name}</span>
         </div>
@@ -70,7 +72,7 @@ export default async function EventDetailPage({
           <div>
             <h1 className="font-display text-5xl tracking-wider">{event.name}</h1>
             <p className="text-white/50 mt-2 tracking-wide">
-              {format(new Date(event.date), "d MMMM yyyy — HH'h'mm", { locale: fr })} · {event.location}
+              {format(new Date(event.date), locale === 'fr' ? "d MMMM yyyy — HH'h'mm" : "MMMM d, yyyy — h:mm a", { locale: dateLocale })} · {event.location}
             </p>
           </div>
           <div>
@@ -81,11 +83,15 @@ export default async function EventDetailPage({
                   {format(new Date(event.prediction_deadline), "d MMM yyyy à HH'h'mm", { locale: fr })}
                 </div>
                 <div className="mt-1">
-                  {isOpen ? <span className="badge-green">Pronostics ouverts</span> : <span className="badge-red">Fermé</span>}
+                  {isOpen ? (
+                    <span className="badge-green">{locale === 'fr' ? 'Pronostics ouverts' : 'Predictions open'}</span>
+                  ) : (
+                    <span className="badge-red">{locale === 'fr' ? 'Fermé' : 'Locked'}</span>
+                  )}
                 </div>
               </div>
             )}
-            {isCompleted && <span className="badge-gray">Événement terminé</span>}
+            {isCompleted && <span className="badge-gray">{locale === 'fr' ? 'Événement terminé' : 'Event completed'}</span>}
           </div>
         </div>
       </div>
@@ -94,10 +100,15 @@ export default async function EventDetailPage({
       {isOpen && userLeagues.length > 0 && (
         <div className="card border-octagon-600">
           <p className="text-white/50 text-sm tracking-wide">
-            Ton pronostic sera automatiquement enregistré dans{' '}
-            <span className="text-white font-semibold">{userLeagues.length} ligue{userLeagues.length > 1 ? 's' : ''}</span>
-            {' '}:{' '}
-            {userLeagues.map((l: any) => l.name).join(', ')}
+            {locale === 'fr' ? (
+              <>Ton pronostic sera automatiquement enregistré dans{' '}
+              <span className="text-white font-semibold">{userLeagues.length} ligue{userLeagues.length > 1 ? 's' : ''}</span>
+              {' '}: {userLeagues.map((l: any) => l.name).join(', ')}</>
+            ) : (
+              <>Your prediction will automatically be saved in{' '}
+              <span className="text-white font-semibold">{userLeagues.length} league{userLeagues.length > 1 ? 's' : ''}</span>
+              {' '}: {userLeagues.map((l: any) => l.name).join(', ')}</>
+            )}
           </p>
         </div>
       )}
@@ -105,9 +116,15 @@ export default async function EventDetailPage({
       {isOpen && userLeagues.length === 0 && (
         <div className="card border-octagon-600">
           <p className="text-white/50 text-sm tracking-wide">
-            Tu n'es dans aucune ligue.{' '}
-            <Link href="/leagues" className="text-blood-400 hover:text-blood-300">Rejoins une ligue</Link>
-            {' '}pour que ton score soit comptabilisé.
+            {locale === 'fr' ? (
+              <>Tu n'es dans aucune ligue.{' '}
+              <Link href="/leagues" className="text-blood-400 hover:text-blood-300">Rejoins une ligue</Link>
+              {' '}pour que ton score soit comptabilisé.</>
+            ) : (
+              <>You're not in any league.{' '}
+              <Link href="/leagues" className="text-blood-400 hover:text-blood-300">Join a league</Link>
+              {' '}to have your score counted.</>
+            )}
           </p>
         </div>
       )}
@@ -169,6 +186,7 @@ export default async function EventDetailPage({
                 userId={user!.id}
                 userLeagues={userLeagues}
                 existing={predictionMap[fight.id]}
+                locale={locale}
               />
             )}
 
@@ -178,12 +196,13 @@ export default async function EventDetailPage({
                 result={fight.fight_results?.[0]}
                 prediction={predictionMap[fight.id]}
                 fight={fight}
+                locale={locale}
               />
             )}
 
             {/* Pronostic existant si event fermé mais pas terminé */}
             {!isOpen && !isCompleted && predictionMap[fight.id] && (
-              <ExistingPrediction prediction={predictionMap[fight.id]} fight={fight} />
+              <ExistingPrediction prediction={predictionMap[fight.id]} fight={fight} locale={locale} />
             )}
           </div>
           )
@@ -193,13 +212,14 @@ export default async function EventDetailPage({
   )
 }
 
-function CompletedFightDisplay({ result, prediction, fight }: { result: any; prediction: any; fight: any }) {
+function CompletedFightDisplay({ result, prediction, fight, locale }: { result: any; prediction: any; fight: any; locale: string }) {
+  const draw = locale === 'fr' ? 'Match nul' : 'Draw'
   const resultWinner = result?.winner === 'fighter1' ? fight.fighter1_name
     : result?.winner === 'fighter2' ? fight.fighter2_name
-    : result?.winner === 'draw' ? 'Match nul' : 'NC'
+    : result?.winner === 'draw' ? draw : 'NC'
 
   const predWinner = prediction?.predicted_winner === 'fighter1' ? fight.fighter1_name
-    : prediction?.predicted_winner === 'fighter2' ? fight.fighter2_name : 'Match nul'
+    : prediction?.predicted_winner === 'fighter2' ? fight.fighter2_name : draw
 
   const points = prediction?.points_earned
   const isDecisionOrDraw = prediction?.predicted_method === 'Decision' || prediction?.predicted_winner === 'draw'
@@ -209,7 +229,9 @@ function CompletedFightDisplay({ result, prediction, fight }: { result: any; pre
       <div className="grid grid-cols-2 gap-3">
         {/* Résultat officiel */}
         <div className="bg-octagon-700 border border-octagon-600 p-4">
-          <div className="text-white/40 text-xs uppercase tracking-widest mb-3">Résultat officiel</div>
+          <div className="text-white/40 text-xs uppercase tracking-widest mb-3">
+            {locale === 'fr' ? 'Résultat officiel' : 'Official result'}
+          </div>
           {result ? (
             <div className="space-y-1">
               <div className="font-display text-lg text-gold-400 tracking-wider">{resultWinner}</div>
@@ -220,7 +242,7 @@ function CompletedFightDisplay({ result, prediction, fight }: { result: any; pre
               </div>
             </div>
           ) : (
-            <span className="text-white/30 text-sm">Pas encore saisi</span>
+            <span className="text-white/30 text-sm">{locale === 'fr' ? 'Pas encore saisi' : 'Not entered yet'}</span>
           )}
         </div>
 
@@ -230,7 +252,9 @@ function CompletedFightDisplay({ result, prediction, fight }: { result: any; pre
           points > 0 ? 'bg-octagon-700 border-octagon-600' :
           'bg-octagon-700 border-octagon-600'
         }`}>
-          <div className="text-white/40 text-xs uppercase tracking-widest mb-3">Ton pronostic</div>
+          <div className="text-white/40 text-xs uppercase tracking-widest mb-3">
+            {locale === 'fr' ? 'Ton pronostic' : 'Your pick'}
+          </div>
           {prediction ? (
             <div className="space-y-1">
               <div className="font-display text-lg tracking-wider">{predWinner}</div>
@@ -253,7 +277,7 @@ function CompletedFightDisplay({ result, prediction, fight }: { result: any; pre
               )}
             </div>
           ) : (
-            <span className="text-white/30 text-sm">Pas de pronostic</span>
+            <span className="text-white/30 text-sm">{locale === 'fr' ? 'Pas de pronostic' : 'No prediction'}</span>
           )}
         </div>
       </div>
@@ -261,13 +285,16 @@ function CompletedFightDisplay({ result, prediction, fight }: { result: any; pre
   )
 }
 
-function ExistingPrediction({ prediction, fight }: { prediction: any; fight: any }) {
+function ExistingPrediction({ prediction, fight, locale }: { prediction: any; fight: any; locale: string }) {
+  const draw = locale === 'fr' ? 'Match nul' : 'Draw'
   const winner = prediction.predicted_winner === 'fighter1' ? fight.fighter1_name
-    : prediction.predicted_winner === 'fighter2' ? fight.fighter2_name : 'Match nul'
+    : prediction.predicted_winner === 'fighter2' ? fight.fighter2_name : draw
   const isDecisionOrDraw = prediction.predicted_method === 'Decision' || prediction.predicted_winner === 'draw'
   return (
     <div className="bg-octagon-700 border border-octagon-600 p-4 border-t border-octagon-700 mt-2">
-      <div className="text-white/40 text-xs uppercase tracking-widest mb-2">Ton pronostic</div>
+      <div className="text-white/40 text-xs uppercase tracking-widest mb-2">
+        {locale === 'fr' ? 'Ton pronostic' : 'Your pick'}
+      </div>
       <div className="flex items-center gap-3 flex-wrap">
         <span className="font-semibold">{winner}</span>
         <span className="badge-gray">{prediction.predicted_method}</span>
