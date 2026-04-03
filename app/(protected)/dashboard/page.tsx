@@ -50,7 +50,7 @@ export default async function DashboardPage() {
           <p className="text-white/40 text-xs mb-4">
             {locale === 'fr' ? 'Deadline pronostics :' : 'Prediction deadline:'}{' '}
             <span className="text-gold-400">
-              {format(new Date(nextEvent.prediction_deadline), locale === 'fr' ? "d MMM yyyy à HH'h'mm" : "MMM d, yyyy at h:mm a", { locale: dateLocale })}
+              {format(new Date(nextEvent.prediction_deadline), locale === 'fr' ? "d MMM yyyy à HH'h'mm" : "MMM d, yyyy 'at' h:mm a", { locale: dateLocale })}
             </span>
           </p>
           <Link href={`/events/${nextEvent.id}`} className="btn-primary inline-flex">

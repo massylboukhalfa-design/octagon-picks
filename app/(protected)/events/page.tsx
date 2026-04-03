@@ -102,7 +102,7 @@ function EventCard({ event, highlight, dateLocale, locale, t }: any) {
       </p>
       {!isCompleted && (
         <p className="text-white/30 text-xs mt-2">
-          {t.events.deadline} : {format(new Date(event.prediction_deadline), locale === 'fr' ? "d MMM à HH'h'mm" : "MMM d at h:mm a", { locale: dateLocale })}
+          {t.events.deadline} : {format(new Date(event.prediction_deadline), locale === 'fr' ? "d MMM à HH'h'mm" : "MMM d 'at' h:mm a", { locale: dateLocale })}
         </p>
       )}
     </Link>
