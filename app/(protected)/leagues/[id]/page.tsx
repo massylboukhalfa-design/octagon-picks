@@ -51,6 +51,12 @@ export default async function LeagueDetailPage({ params }: { params: { id: strin
           </div>
           <h1 className="font-display text-5xl tracking-wider">{league.name}</h1>
           {league.description && <p className="text-white/50 mt-2 tracking-wide">{league.description}</p>}
+          <div className="mt-3">
+            <Link href={`/leagues/${params.id}/draft`}
+              className="inline-flex items-center gap-2 text-xs uppercase tracking-widest font-semibold text-gold-400 hover:text-gold-300 border border-gold-500/30 hover:border-gold-500/60 px-3 py-1.5 transition-all">
+              🏆 {locale === 'fr' ? 'Draft Mode' : 'Draft Mode'}
+            </Link>
+          </div>
         </div>
         <div className="text-right">
           <div className="text-white/40 text-xs uppercase tracking-widest mb-1">{t.leagues.inviteCode}</div>
