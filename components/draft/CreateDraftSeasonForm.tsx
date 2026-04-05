@@ -67,7 +67,7 @@ export default function CreateDraftSeasonForm({ leagueId, userId, events, locale
     // Lier les events
     const { error: evErr } = await supabase
       .from('draft_season_events')
-      .insert([...selectedEventIds].map(event_id => ({ season_id: season.id, event_id })))
+      .insert(Array.from(selectedEventIds).map(event_id => ({ season_id: season.id, event_id })))
 
     if (evErr) {
       setError(evErr.message)
