@@ -5,10 +5,12 @@ import { useRouter } from 'next/navigation'
 
 type RosterEntry = {
   id: string
+  user_id?: string
   fighter_id: string
   slot_type: string
-  fighters: { id: string; name: string; photo_url?: string }
-  fights: { ufc_events: { name: string } }
+  acquired_by?: string
+  fighters: any
+  fights: any
 }
 
 type Member = {
