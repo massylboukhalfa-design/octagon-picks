@@ -1,8 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 
-const admin = () => createAdmin(
+const getAdmin = () => createAdmin(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
@@ -15,17 +16,17 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const db = admin()
+  const db = getAdmin()
 
-  // Récupérer les deux rosters et vérifier que les fighters n'ont pas encore combattu
+  // Récupérer les deux rosters avec le nom du fighter au moment de la proposition
   const { data: proposerRoster } = await db
     .from('draft_rosters')
-    .select('id, user_id, fighter_id, fight_id, fights(fight_results(id))')
+    .select('id, user_id, fighter_id, fight_id, fighters(name), fights(fight_results(id))')
     .eq('id', proposerRosterId).single()
 
   const { data: receiverRoster } = await db
     .from('draft_rosters')
-    .select('id, user_id, fighter_id, fight_id, fights(fight_results(id))')
+    .select('id, user_id, fighter_id, fight_id, fighters(name), fights(fight_results(id))')
     .eq('id', receiverRosterId).single()
 
   if (!proposerRoster || !receiverRoster)
@@ -37,11 +38,25 @@ export async function POST(req: NextRequest) {
   // Vérifier que les combats n'ont pas encore eu lieu
   const proposerFightDone = (proposerRoster.fights as any)?.fight_results?.length > 0
   const receiverFightDone = (receiverRoster.fights as any)?.fight_results?.length > 0
-
   if (proposerFightDone || receiverFightDone)
-    return NextResponse.json({
-      error: 'Cannot trade fighters who have already fought'
-    }, { status: 400 })
+    return NextResponse.json({ error: 'Cannot trade fighters who have already fought' }, { status: 400 })
+
+  // Vérifier qu'aucun de ces fighters n'est déjà dans un trade pending
+  const { data: existingTrades } = await db
+    .from('draft_trades')
+    .select('id')
+    .eq('season_id', seasonId)
+    .eq('status', 'pending')
+    .or(`proposer_roster_id.eq.${proposerRosterId},receiver_roster_id.eq.${proposerRosterId},proposer_roster_id.eq.${receiverRosterId},receiver_roster_id.eq.${receiverRosterId}`)
+
+  if (existingTrades && existingTrades.length > 0)
+    return NextResponse.json({ 
+      error: 'One of these fighters is already involved in a pending trade' 
+    }, { status: 409 })
+
+  // Stocker les noms au moment de la proposition (snapshot)
+  const proposerFighterName = (proposerRoster.fighters as any)?.name ?? ''
+  const receiverFighterName = (receiverRoster.fighters as any)?.name ?? ''
 
   const { data: trade, error } = await db.from('draft_trades').insert({
     season_id: seasonId,
@@ -49,6 +64,8 @@ export async function POST(req: NextRequest) {
     receiver_id: receiverRoster.user_id,
     proposer_roster_id: proposerRosterId,
     receiver_roster_id: receiverRosterId,
+    proposer_fighter_name: proposerFighterName,
+    receiver_fighter_name: receiverFighterName,
     message: message || null,
     status: 'pending',
   }).select().single()
@@ -57,9 +74,9 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ success: true, trade })
 }
 
-// PATCH — accepter / refuser / annuler un échange
+// PATCH — accepter / refuser / annuler
 export async function PATCH(req: NextRequest) {
-  const { tradeId, action } = await req.json()
+  const { tradeId, action, leagueId } = await req.json()
   if (!tradeId || !['accept', 'reject', 'cancel'].includes(action))
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
 
@@ -67,12 +84,11 @@ export async function PATCH(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const db = admin()
+  const db = getAdmin()
   const { data: trade } = await db.from('draft_trades').select('*').eq('id', tradeId).single()
   if (!trade) return NextResponse.json({ error: 'Trade not found' }, { status: 404 })
   if (trade.status !== 'pending') return NextResponse.json({ error: 'Trade already resolved' }, { status: 400 })
 
-  // Vérifier les permissions
   if (action === 'cancel' && trade.proposer_id !== user.id)
     return NextResponse.json({ error: 'Only proposer can cancel' }, { status: 403 })
   if (['accept', 'reject'].includes(action) && trade.receiver_id !== user.id)
@@ -81,9 +97,10 @@ export async function PATCH(req: NextRequest) {
   const status = action === 'accept' ? 'accepted' : action === 'reject' ? 'rejected' : 'cancelled'
 
   if (action === 'accept') {
-    // Échanger les fighters dans les rosters
-    const { data: pRoster } = await db.from('draft_rosters').select('fighter_id, fight_id, slot_type').eq('id', trade.proposer_roster_id).single()
-    const { data: rRoster } = await db.from('draft_rosters').select('fighter_id, fight_id, slot_type').eq('id', trade.receiver_roster_id).single()
+    const { data: pRoster } = await db.from('draft_rosters')
+      .select('fighter_id, fight_id, slot_type').eq('id', trade.proposer_roster_id).single()
+    const { data: rRoster } = await db.from('draft_rosters')
+      .select('fighter_id, fight_id, slot_type').eq('id', trade.receiver_roster_id).single()
 
     if (!pRoster || !rRoster) return NextResponse.json({ error: 'Rosters not found' }, { status: 404 })
 
@@ -93,16 +110,39 @@ export async function PATCH(req: NextRequest) {
     if (pResult || rResult)
       return NextResponse.json({ error: 'Cannot trade — fight already happened' }, { status: 400 })
 
-    // Swap
+    // Swap des fighters
     await db.from('draft_rosters').update({
-      fighter_id: rRoster.fighter_id, fight_id: rRoster.fight_id, slot_type: rRoster.slot_type, acquired_by: 'trade'
+      fighter_id: rRoster.fighter_id,
+      fight_id: rRoster.fight_id,
+      slot_type: rRoster.slot_type,
+      acquired_by: 'trade'
     }).eq('id', trade.proposer_roster_id)
 
     await db.from('draft_rosters').update({
-      fighter_id: pRoster.fighter_id, fight_id: pRoster.fight_id, slot_type: pRoster.slot_type, acquired_by: 'trade'
+      fighter_id: pRoster.fighter_id,
+      fight_id: pRoster.fight_id,
+      slot_type: pRoster.slot_type,
+      acquired_by: 'trade'
     }).eq('id', trade.receiver_roster_id)
+
+    // Annuler tous les autres trades pending impliquant ces rosters
+    await db.from('draft_trades')
+      .update({ status: 'cancelled', resolved_at: new Date().toISOString() })
+      .eq('season_id', trade.season_id)
+      .eq('status', 'pending')
+      .neq('id', tradeId)
+      .or(`proposer_roster_id.eq.${trade.proposer_roster_id},receiver_roster_id.eq.${trade.proposer_roster_id},proposer_roster_id.eq.${trade.receiver_roster_id},receiver_roster_id.eq.${trade.receiver_roster_id}`)
   }
 
-  await db.from('draft_trades').update({ status, resolved_at: new Date().toISOString() }).eq('id', tradeId)
+  await db.from('draft_trades').update({ 
+    status, 
+    resolved_at: new Date().toISOString() 
+  }).eq('id', tradeId)
+
+  if (leagueId) {
+    revalidatePath(`/leagues/${leagueId}/draft/${trade.season_id}/trades`)
+    revalidatePath(`/leagues/${leagueId}/draft/${trade.season_id}`)
+  }
+
   return NextResponse.json({ success: true, status })
 }

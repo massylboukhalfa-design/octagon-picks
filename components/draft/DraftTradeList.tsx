@@ -10,19 +10,22 @@ type Trade = {
   created_at: string
   proposer_id: string
   receiver_id: string
-  proposer_roster: { fighters: { name: string }; fights: { ufc_events: { name: string } } }
-  receiver_roster: { fighters: { name: string }; fights: { ufc_events: { name: string } } }
+  // Noms snapshotés au moment de la proposition — toujours corrects
+  proposer_fighter_name: string
+  receiver_fighter_name: string
   proposer_profile: { username: string }
   receiver_profile: { username: string }
+  season_id?: string
 }
 
 type Props = {
   trades: Trade[]
   currentUserId: string
+  leagueId?: string
   locale?: string
 }
 
-export default function DraftTradeList({ trades, currentUserId, locale = 'fr' }: Props) {
+export default function DraftTradeList({ trades, currentUserId, leagueId, locale = 'fr' }: Props) {
   const router = useRouter()
   const isFr = locale === 'fr'
   const [loading, setLoading] = useState<string | null>(null)
@@ -30,12 +33,12 @@ export default function DraftTradeList({ trades, currentUserId, locale = 'fr' }:
   const pending = trades.filter(t => t.status === 'pending')
   const resolved = trades.filter(t => t.status !== 'pending')
 
-  const handleAction = async (tradeId: string, action: 'accept' | 'reject' | 'cancel') => {
-    setLoading(tradeId)
+  const handleAction = async (trade: Trade, action: 'accept' | 'reject' | 'cancel') => {
+    setLoading(trade.id)
     const res = await fetch('/api/draft-trade', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tradeId, action }),
+      body: JSON.stringify({ tradeId: trade.id, action, leagueId }),
     })
     const data = await res.json()
     if (!data.error) router.refresh()
@@ -66,15 +69,16 @@ export default function DraftTradeList({ trades, currentUserId, locale = 'fr' }:
         isPending && !isProposer ? 'border-gold-500/50 bg-yellow-950/10' : 'border-octagon-700'
       }`}>
         <div className="flex items-start justify-between gap-2">
-          <div className="text-sm">
+          <div className="text-sm leading-relaxed">
             <span className="font-semibold">{trade.proposer_profile?.username}</span>
             <span className="text-white/40"> {isFr ? 'offre' : 'offers'} </span>
-            <span className="font-semibold text-blood-400">{trade.proposer_roster?.fighters?.name}</span>
+            {/* Utiliser les noms snapshotés — jamais affectés par le swap */}
+            <span className="font-semibold text-blood-400">{trade.proposer_fighter_name}</span>
             <span className="text-white/40"> {isFr ? 'contre' : 'for'} </span>
-            <span className="font-semibold text-gold-400">{trade.receiver_roster?.fighters?.name}</span>
+            <span className="font-semibold text-gold-400">{trade.receiver_fighter_name}</span>
             <span className="text-white/40"> ({trade.receiver_profile?.username})</span>
           </div>
-          <span className={`text-xs flex-shrink-0 ${
+          <span className={`text-xs flex-shrink-0 font-semibold ${
             trade.status === 'accepted' ? 'text-emerald-400' :
             trade.status === 'pending' ? 'text-gold-400' :
             'text-white/30'
@@ -90,19 +94,19 @@ export default function DraftTradeList({ trades, currentUserId, locale = 'fr' }:
         {isPending && (
           <div className="flex gap-2">
             {isProposer ? (
-              <button onClick={() => handleAction(trade.id, 'cancel')}
+              <button onClick={() => handleAction(trade, 'cancel')}
                 disabled={loading === trade.id}
                 className="text-xs text-white/40 hover:text-white transition-colors">
                 {isFr ? 'Annuler' : 'Cancel'}
               </button>
             ) : (
               <>
-                <button onClick={() => handleAction(trade.id, 'accept')}
+                <button onClick={() => handleAction(trade, 'accept')}
                   disabled={loading === trade.id}
                   className="btn-primary text-xs py-1.5 px-3 disabled:opacity-50">
-                  {isFr ? 'Accepter' : 'Accept'}
+                  {loading === trade.id ? '...' : (isFr ? 'Accepter' : 'Accept')}
                 </button>
-                <button onClick={() => handleAction(trade.id, 'reject')}
+                <button onClick={() => handleAction(trade, 'reject')}
                   disabled={loading === trade.id}
                   className="btn-secondary text-xs py-1.5 px-3 disabled:opacity-50">
                   {isFr ? 'Refuser' : 'Decline'}

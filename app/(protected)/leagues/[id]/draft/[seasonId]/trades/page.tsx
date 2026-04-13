@@ -30,9 +30,16 @@ export default async function DraftTradesPage({
 
   const myRosters = (allRosters ?? []).filter((r: any) => r.user_id === user!.id)
 
+  // Récupérer les trades avec les noms snapshotés (pas besoin de joindre les rosters)
   const { data: trades } = await supabase
     .from('draft_trades')
-    .select('*, proposer_roster:proposer_roster_id(fighters(name), fights(ufc_events(name))), receiver_roster:receiver_roster_id(fighters(name), fights(ufc_events(name))), proposer_profile:proposer_id(username), receiver_profile:receiver_id(username)')
+    .select(`
+      id, status, message, created_at, season_id,
+      proposer_id, receiver_id,
+      proposer_fighter_name, receiver_fighter_name,
+      proposer_profile:proposer_id(username),
+      receiver_profile:receiver_id(username)
+    `)
     .eq('season_id', params.seasonId)
     .or(`proposer_id.eq.${user!.id},receiver_id.eq.${user!.id}`)
     .order('created_at', { ascending: false })
@@ -63,7 +70,12 @@ export default async function DraftTradesPage({
         <h2 className="font-display text-xl tracking-wider">
           {isFr ? 'MES ÉCHANGES' : 'MY TRADES'}
         </h2>
-        <DraftTradeList trades={trades ?? []} currentUserId={user!.id} locale={locale} />
+        <DraftTradeList
+          trades={trades ?? []}
+          currentUserId={user!.id}
+          leagueId={params.id}
+          locale={locale}
+        />
       </div>
     </div>
   )
