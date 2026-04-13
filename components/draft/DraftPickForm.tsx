@@ -26,13 +26,14 @@ type PickedFighter = {
 
 type Props = {
   seasonId: string
+  leagueId: string
   userId: string
   eventsWithFights: EventWithFights[]
   picksNeeded: { main_event: number; undercard: number }
   locale?: string
 }
 
-export default function DraftPickForm({ seasonId, userId, eventsWithFights, picksNeeded, locale = 'fr' }: Props) {
+export default function DraftPickForm({ seasonId, leagueId, userId, eventsWithFights, picksNeeded, locale = 'fr' }: Props) {
   const router = useRouter()
   const isFr = locale === 'fr'
   const [picks, setPicks] = useState<PickedFighter[]>([])
@@ -82,7 +83,7 @@ export default function DraftPickForm({ seasonId, userId, eventsWithFights, pick
     const res = await fetch('/api/draft-pick', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ seasonId, picks: picks.map(({ fighter_name, ...p }) => p) }),
+      body: JSON.stringify({ seasonId, leagueId, picks: picks.map(({ fighter_name, ...p }) => p) }),
     })
     const data = await res.json()
 
@@ -90,8 +91,10 @@ export default function DraftPickForm({ seasonId, userId, eventsWithFights, pick
       setError(data.error)
       setLoading(false)
     } else {
+      // revalidatePath côté serveur a déjà invalidé le cache
+      // On redirige vers la page saison qui sera rechargée fraîche
+      router.push(`/leagues/${leagueId}/draft/${seasonId}`)
       router.refresh()
-      router.back()
     }
   }
 

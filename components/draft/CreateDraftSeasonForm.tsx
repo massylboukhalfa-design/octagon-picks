@@ -24,6 +24,7 @@ export default function CreateDraftSeasonForm({ leagueId, userId, events, locale
   const [seasonStart, setSeasonStart] = useState('')
   const [seasonEnd, setSeasonEnd] = useState('')
   const [hoursPerPick, setHoursPerPick] = useState(24)
+  const [totalRounds, setTotalRounds] = useState(1)
   const [selectedEventIds, setSelectedEventIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -53,6 +54,7 @@ export default function CreateDraftSeasonForm({ leagueId, userId, events, locale
         status: 'upcoming',
         draft_order: 'snake',
         hours_per_pick: hoursPerPick,
+        total_rounds: totalRounds,
         season_start: seasonStart || null,
         season_end: seasonEnd || null,
         created_by: userId,
@@ -102,7 +104,29 @@ export default function CreateDraftSeasonForm({ leagueId, userId, events, locale
         </div>
         <div>
           <label className="label">
-            {isFr ? `Heures par tour de draft` : `Hours per draft pick`}
+            {isFr ? 'Nombre de rounds de draft' : 'Number of draft rounds'}
+          </label>
+          <div className="flex gap-2 flex-wrap">
+            {[1, 2, 3, 4, 5].map(r => (
+              <button key={r} type="button" onClick={() => setTotalRounds(r)}
+                className={`py-1.5 px-4 border text-sm font-mono transition-all ${
+                  totalRounds === r
+                    ? 'border-blood-500 bg-blood-500/10 text-white'
+                    : 'border-octagon-600 text-white/40 hover:text-white'
+                }`}>
+                {r}
+              </button>
+            ))}
+          </div>
+          <p className="text-white/30 text-xs mt-2">
+            {isFr
+              ? `Chaque joueur picke ${totalRounds} fois — ${totalRounds} × (1 ME + 2 UC) fighters par joueur.`
+              : `Each player picks ${totalRounds} time(s) — ${totalRounds} × (1 ME + 2 UC) fighters per player.`}
+          </p>
+        </div>
+        <div>
+          <label className="label">
+            {isFr ? 'Heures par tour de draft' : 'Hours per draft pick'}
           </label>
           <div className="flex gap-2 flex-wrap">
             {[12, 24, 48, 72].map(h => (
@@ -178,6 +202,7 @@ export default function CreateDraftSeasonForm({ leagueId, userId, events, locale
           <p>🥊 {isFr ? '1 fighter du main event par tour' : '1 main event fighter per pick'}</p>
           <p>⚔️ {isFr ? '2 fighters de l\'undercard par tour' : '2 undercard fighters per pick'}</p>
           <p>🐍 {isFr ? 'Ordre snake (1-2-3-3-2-1...)' : 'Snake order (1-2-3-3-2-1...)'}</p>
+          <p>🔄 {isFr ? `${totalRounds} round(s) de draft` : `${totalRounds} draft round(s)`}</p>
           <p>⏱️ {isFr ? `${hoursPerPick}h par joueur pour picker` : `${hoursPerPick}h per player to pick`}</p>
         </div>
       </div>

@@ -100,6 +100,7 @@ export default async function DraftPickPage({
 
       <DraftPickForm
         seasonId={params.seasonId}
+        leagueId={params.id}
         userId={user!.id}
         eventsWithFights={eventsWithFights}
         picksNeeded={picksNeeded}

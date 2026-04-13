@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 
 type Pick = {
   fighter_id: string
@@ -9,7 +10,7 @@ type Pick = {
 }
 
 export async function POST(req: NextRequest) {
-  const { seasonId, picks }: { seasonId: string; picks: Pick[] } = await req.json()
+  const { seasonId, picks, leagueId }: { seasonId: string; picks: Pick[]; leagueId: string } = await req.json()
   if (!seasonId || !picks?.length)
     return NextResponse.json({ error: 'seasonId and picks required' }, { status: 400 })
 
@@ -22,19 +23,16 @@ export async function POST(req: NextRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  // Vérifier que la saison est en drafting
   const { data: season } = await admin
     .from('draft_seasons').select('*').eq('id', seasonId).single()
   if (!season || season.status !== 'drafting')
     return NextResponse.json({ error: 'Season not in drafting status' }, { status: 400 })
 
-  // Vérifier que c'est bien le tour de cet utilisateur
   const { data: currentPicker } = await admin
     .rpc('get_draft_current_user', { p_season_id: seasonId })
   if (currentPicker !== user.id)
     return NextResponse.json({ error: 'Not your turn' }, { status: 403 })
 
-  // Valider le nombre de picks
   const mainEventPicks = picks.filter(p => p.slot_type === 'main_event')
   const undercardPicks = picks.filter(p => p.slot_type === 'undercard')
   const needed = season.picks_per_turn ?? { main_event: 1, undercard: 2 }
@@ -44,7 +42,6 @@ export async function POST(req: NextRequest) {
       error: `Need exactly ${needed.main_event} main event + ${needed.undercard} undercard picks`
     }, { status: 400 })
 
-  // Vérifier que les fighters ne sont pas déjà draftés
   const { data: alreadyDrafted } = await admin
     .from('draft_rosters')
     .select('fighter_id')
@@ -54,7 +51,6 @@ export async function POST(req: NextRequest) {
   if (alreadyDrafted?.length)
     return NextResponse.json({ error: 'Some fighters already drafted' }, { status: 409 })
 
-  // Insérer les picks
   const { error: insertError } = await admin.from('draft_rosters').insert(
     picks.map(p => ({
       season_id: seasonId,
@@ -68,14 +64,9 @@ export async function POST(req: NextRequest) {
   )
   if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 })
 
-  // Avancer au tour suivant
   const totalMembers = season.turn_order?.length ?? 1
+  const totalRounds = season.total_rounds ?? 1
   const nextIndex = season.current_pick_index + 1
-
-  // Vérifier si le draft est terminé (tous les fighters disponibles ont été pickés)
-  // On considère le draft terminé quand tous les joueurs ont eu leur tour une fois
-  // (tu peux ajuster ce critère selon tes besoins)
-  const totalRounds = 1 // Nombre de rounds de draft — à rendre configurable plus tard
   const isDraftComplete = nextIndex >= totalMembers * totalRounds
 
   if (isDraftComplete) {
@@ -89,6 +80,12 @@ export async function POST(req: NextRequest) {
       current_pick_index: nextIndex,
       current_pick_started_at: new Date().toISOString(),
     }).eq('id', seasonId)
+  }
+
+  // Revalider les pages concernées pour que tous les joueurs voient la mise à jour
+  if (leagueId) {
+    revalidatePath(`/leagues/${leagueId}/draft/${seasonId}`)
+    revalidatePath(`/leagues/${leagueId}/draft/${seasonId}/pick`)
   }
 
   return NextResponse.json({ success: true, next_pick_index: nextIndex, draft_complete: isDraftComplete })
