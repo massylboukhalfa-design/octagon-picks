@@ -10,11 +10,10 @@ type Trade = {
   created_at: string
   proposer_id: string
   receiver_id: string
-  // Noms snapshotés au moment de la proposition — toujours corrects
   proposer_fighter_name: string
   receiver_fighter_name: string
-  proposer_profile: { username: string }
-  receiver_profile: { username: string }
+  proposer_profile: any
+  receiver_profile: any
   season_id?: string
 }
 
@@ -70,13 +69,12 @@ export default function DraftTradeList({ trades, currentUserId, leagueId, locale
       }`}>
         <div className="flex items-start justify-between gap-2">
           <div className="text-sm leading-relaxed">
-            <span className="font-semibold">{trade.proposer_profile?.username}</span>
+            <span className="font-semibold">{Array.isArray(trade.proposer_profile) ? trade.proposer_profile[0]?.username : trade.proposer_profile?.username}</span>
             <span className="text-white/40"> {isFr ? 'offre' : 'offers'} </span>
-            {/* Utiliser les noms snapshotés — jamais affectés par le swap */}
             <span className="font-semibold text-blood-400">{trade.proposer_fighter_name}</span>
             <span className="text-white/40"> {isFr ? 'contre' : 'for'} </span>
             <span className="font-semibold text-gold-400">{trade.receiver_fighter_name}</span>
-            <span className="text-white/40"> ({trade.receiver_profile?.username})</span>
+            <span className="text-white/40"> ({Array.isArray(trade.receiver_profile) ? trade.receiver_profile[0]?.username : trade.receiver_profile?.username})</span>
           </div>
           <span className={`text-xs flex-shrink-0 font-semibold ${
             trade.status === 'accepted' ? 'text-emerald-400' :
