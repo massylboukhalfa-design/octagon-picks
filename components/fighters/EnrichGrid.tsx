@@ -141,7 +141,7 @@ export default function EnrichGrid({ fighters, locale = 'fr' }: { fighters: Figh
                 {fr ? 'Arrêter' : 'Stop'}
               </button>
             ) : (
-              <button onClick={startAutoEnrich} disabled={missing === 0 || autoStatus === 'running'}
+              <button onClick={startAutoEnrich} disabled={missing === 0}
                 className="btn-gold text-sm py-2 px-4 disabled:opacity-40">
                 {autoStatus === 'done'
                   ? (fr ? '↺ Relancer' : '↺ Retry')
