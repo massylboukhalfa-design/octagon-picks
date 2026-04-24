@@ -50,7 +50,7 @@ export default async function EventsPage() {
           <h2 className="font-display text-2xl tracking-wider text-blood-400 mb-4">{t.events.upcoming}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {upcoming.map((event: any) => (
-              <EventCard key={event.id} event={event} highlight dateLocale={dateLocale} locale={locale} t={t} />
+              <EventCard key={event.id} event={event} highlight dateLocale={dateLocale} locale={locale} t={t} isAdmin={profile?.is_admin ?? false} />
             ))}
           </div>
         </div>
@@ -61,7 +61,7 @@ export default async function EventsPage() {
           <h2 className="font-display text-2xl tracking-wider text-white/40 mb-4">{t.events.past}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {past.map((event: any) => (
-              <EventCard key={event.id} event={event} highlight={false} dateLocale={dateLocale} locale={locale} t={t} />
+              <EventCard key={event.id} event={event} highlight={false} dateLocale={dateLocale} locale={locale} t={t} isAdmin={profile?.is_admin ?? false} />
             ))}
           </div>
         </div>
@@ -78,33 +78,47 @@ export default async function EventsPage() {
   )
 }
 
-function EventCard({ event, highlight, dateLocale, locale, t }: any) {
+function EventCard({ event, highlight, dateLocale, locale, t, isAdmin }: any) {
   const fightCount = event.fights?.[0]?.count ?? 0
   const isCompleted = event.status === 'completed'
   const isLocked = event.status === 'locked'
   const deadlinePassed = new Date() > new Date(event.prediction_deadline)
+  const fr = locale === 'fr'
 
   return (
-    <Link href={`/events/${event.id}`}
-      className={`card-hover block ${highlight ? 'border-blood-500/30' : ''}`}>
-      <div className="flex items-start justify-between mb-3">
-        <div>
-          {isCompleted && <span className="badge-gray text-xs mb-2 inline-flex">{locale === 'fr' ? 'TERMINÉ' : 'COMPLETED'}</span>}
-          {isLocked && <span className="badge-gray text-xs mb-2 inline-flex">{locale === 'fr' ? 'FERMÉ' : 'LOCKED'}</span>}
-          {!isCompleted && !isLocked && !deadlinePassed && <span className="badge-red text-xs mb-2 inline-flex">{locale === 'fr' ? 'OUVERT' : 'OPEN'}</span>}
-          {!isCompleted && !isLocked && deadlinePassed && <span className="badge-gray text-xs mb-2 inline-flex">{locale === 'fr' ? 'DEADLINE PASSÉE' : 'DEADLINE PASSED'}</span>}
+    <div className={`card ${highlight ? 'border-blood-500/30' : ''}`}>
+      <Link href={`/events/${event.id}`} className="block hover:opacity-90 transition-opacity">
+        <div className="flex items-start justify-between mb-3">
+          <div>
+            {isCompleted && <span className="badge-gray text-xs mb-2 inline-flex">{fr ? 'TERMINÉ' : 'COMPLETED'}</span>}
+            {isLocked && <span className="badge-gray text-xs mb-2 inline-flex">{fr ? 'FERMÉ' : 'LOCKED'}</span>}
+            {!isCompleted && !isLocked && !deadlinePassed && <span className="badge-red text-xs mb-2 inline-flex">{fr ? 'OUVERT' : 'OPEN'}</span>}
+            {!isCompleted && !isLocked && deadlinePassed && <span className="badge-gray text-xs mb-2 inline-flex">{fr ? 'DEADLINE PASSÉE' : 'DEADLINE PASSED'}</span>}
+          </div>
+          <span className="text-white/30 text-xs font-mono">{fightCount} {fr ? 'combats' : 'fights'}</span>
         </div>
-        <span className="text-white/30 text-xs font-mono">{fightCount} {locale === 'fr' ? 'combats' : 'fights'}</span>
-      </div>
-      <h3 className="font-display text-xl tracking-wider mb-1 leading-tight">{event.name}</h3>
-      <p className="text-white/40 text-xs">
-        {format(new Date(event.date), locale === 'fr' ? 'd MMM yyyy' : 'MMM d, yyyy', { locale: dateLocale })} · {event.location}
-      </p>
-      {!isCompleted && (
-        <p className="text-white/30 text-xs mt-2">
-          {t.events.deadline} : {format(new Date(event.prediction_deadline), locale === 'fr' ? "d MMM à HH'h'mm" : "MMM d 'at' h:mm a", { locale: dateLocale })}
+        <h3 className="font-display text-xl tracking-wider mb-1 leading-tight">{event.name}</h3>
+        <p className="text-white/40 text-xs">
+          {format(new Date(event.date), fr ? 'd MMM yyyy' : 'MMM d, yyyy', { locale: dateLocale })} · {event.location}
         </p>
+        {!isCompleted && (
+          <p className="text-white/30 text-xs mt-2">
+            {t.events.deadline} : {format(new Date(event.prediction_deadline), fr ? "d MMM à HH'h'mm" : "MMM d 'at' h:mm a", { locale: dateLocale })}
+          </p>
+        )}
+      </Link>
+      {isAdmin && (
+        <div className="flex gap-2 mt-3 pt-3 border-t border-octagon-700">
+          <Link href={`/events/${event.id}/edit`}
+            className="text-xs text-white/40 hover:text-white border border-octagon-600 hover:border-octagon-500 px-2 py-1 transition-all">
+            ✏️ {fr ? 'Modifier' : 'Edit'}
+          </Link>
+          <Link href={`/events/${event.id}/results`}
+            className="text-xs text-white/40 hover:text-gold-400 border border-octagon-600 hover:border-gold-500/50 px-2 py-1 transition-all">
+            🏆 {fr ? 'Résultats' : 'Results'}
+          </Link>
+        </div>
       )}
-    </Link>
+    </div>
   )
 }
