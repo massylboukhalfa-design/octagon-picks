@@ -1,85 +1,79 @@
-import { createClient } from '@supabase/supabase-js'
-import { NextResponse } from 'next/server'
-import { POINTS } from '@/types'
+import { createClient as createAdmin } from '@supabase/supabase-js'
+import { NextRequest, NextResponse } from 'next/server'
 
-export async function POST(request: Request) {
-  const { eventId } = await request.json()
-  console.log('🔵 eventId:', eventId)
+export async function POST(req: NextRequest) {
+  const { eventId } = await req.json()
+  if (!eventId) return NextResponse.json({ error: 'eventId required' }, { status: 400 })
 
-  const supabase = createClient(
+  const db = createAdmin(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  // Requête 1 : fights de l'event
-  const { data: fights, error: fightsError } = await supabase
+  const { data: fights } = await db
     .from('fights')
-    .select('id')
+    .select('id, fighter1_name, fighter2_name, fight_results(*)')
     .eq('event_id', eventId)
 
-  console.log('🔵 Fights:', fights?.length, fightsError?.message)
-  if (!fights || fights.length === 0) {
-    return NextResponse.json({ error: 'No fights' }, { status: 404 })
-  }
+  if (!fights?.length) return NextResponse.json({ error: 'No fights found' }, { status: 404 })
 
-  const fightIds = fights.map(f => f.id)
+  let totalUpdated = 0
+  const details: any[] = []
 
-  // Requête 2 : résultats séparément
-  const { data: results, error: resultsError } = await supabase
-    .from('fight_results')
-    .select('*')
-    .in('fight_id', fightIds)
+  for (const fight of fights) {
+    const result = (fight.fight_results as any[])?.[0]
+    if (!result) continue
 
-  console.log('🔵 Results:', results?.length, resultsError?.message)
-
-  // Requête 3 : predictions
-  const { data: predictions, error: predsError } = await supabase
-    .from('predictions')
-    .select('*')
-    .in('fight_id', fightIds)
-
-  console.log('🔵 Predictions:', predictions?.length, predsError?.message)
-
-  if (!results || !predictions) {
-    return NextResponse.json({ error: 'Missing data' }, { status: 500 })
-  }
-
-  // Map résultats par fight_id
-  const resultMap = Object.fromEntries(results.map(r => [r.fight_id, r]))
-
-  let updated = 0
-
-  for (const pred of predictions) {
-    const result = resultMap[pred.fight_id]
-    if (!result) {
-      console.log('🔵 No result for fight:', pred.fight_id)
-      continue
-    }
-
-    let points = 0
-    const correctWinner = pred.predicted_winner === result.winner
-    const correctMethod = pred.predicted_method === result.method
-    // Decision ou Draw : round automatiquement correct si méthode/vainqueur corrects
-    const correctRound = (result.method === 'Decision' || result.winner === 'draw')
-      ? (pred.predicted_method === 'Decision' || pred.predicted_winner === 'draw')
-        && pred.predicted_winner === result.winner
-      : pred.predicted_round === result.round
-
-    if (correctWinner) points += POINTS.CORRECT_WINNER
-    if (correctMethod) points += POINTS.CORRECT_METHOD
-    if (correctRound) points += POINTS.CORRECT_ROUND
-    if (correctWinner && correctMethod && correctRound) points += POINTS.PERFECT_COMBO
-
-    console.log(`🔵 Pred ${pred.id} → ${points} pts (W:${correctWinner} M:${correctMethod} R:${correctRound})`)
-
-    const { error: updateError } = await supabase
+    const { data: predictions } = await db
       .from('predictions')
-      .update({ points_earned: points })
-      .eq('id', pred.id)
+      .select('id, user_id, predicted_winner, predicted_method, predicted_round')
+      .eq('fight_id', fight.id)
 
-    console.log('🔵 Update:', updateError ? updateError.message : 'OK')
-    updated++
+    if (!predictions?.length) continue
+
+    for (const pred of predictions) {
+      const correctWinner = pred.predicted_winner === result.winner
+
+      // Comparaison stricte des valeurs exactes stockées en BDD
+      const correctMethod = pred.predicted_method === result.method
+
+      // Comparaison numérique stricte
+      const correctRound = Number(pred.predicted_round) === Number(result.round)
+
+      let points = 0
+      if (correctWinner) points += 10
+      if (correctMethod) points += 5
+      if (correctRound)  points += 5
+      if (correctWinner && correctMethod && correctRound) points += 10
+
+      points = Math.min(points, 30)
+
+      await db.from('predictions').update({ points_earned: points }).eq('id', pred.id)
+      totalUpdated++
+
+      // Log détaillé pour débugger
+      details.push({
+        fight: `${fight.fighter1_name} vs ${fight.fighter2_name}`,
+        result_raw: {
+          winner: result.winner,
+          method: result.method,
+          round: result.round,
+          method_type: typeof result.method,
+          round_type: typeof result.round,
+        },
+        prediction_raw: {
+          winner: pred.predicted_winner,
+          method: pred.predicted_method,
+          round: pred.predicted_round,
+          method_type: typeof pred.predicted_method,
+          round_type: typeof pred.predicted_round,
+        },
+        correct: { winner: correctWinner, method: correctMethod, round: correctRound },
+        points,
+      })
+    }
   }
 
-  return NextResponse.json({ success: true, updated })
+  await db.from('ufc_events').update({ status: 'completed' }).eq('id', eventId)
+  return NextResponse.json({ success: true, predictions_updated: totalUpdated, details })
 }
