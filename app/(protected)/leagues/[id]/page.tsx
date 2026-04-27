@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { format } from 'date-fns'
 import { fr, enUS } from 'date-fns/locale'
 import { getLocale } from '@/lib/i18n/server'
+import DeleteLeagueButton from '@/components/leagues/DeleteLeagueButton'
 import { translations } from '@/lib/i18n/translations'
 
 export default async function LeagueDetailPage({ params }: { params: { id: string } }) {
@@ -36,7 +37,9 @@ export default async function LeagueDetailPage({ params }: { params: { id: strin
     .select('id, name, date, location, status, fights(id, predictions(count))')
     .order('date', { ascending: false }).limit(10)
 
+  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user!.id).single()
   const isOwner = league.owner_id === user!.id
+  const canDelete = isOwner || profile?.is_admin
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -145,16 +148,23 @@ export default async function LeagueDetailPage({ params }: { params: { id: strin
         </div>
       </div>
 
-      {isOwner && (
-        <div className="card border-gold-500/30">
-          <h2 className="font-display text-2xl tracking-wider mb-4 text-gold-400">
-            {locale === 'fr' ? 'ADMINISTRATION' : 'ADMIN'}
+      {canDelete && (
+        <div className="card border-red-800/30 space-y-4">
+          <h2 className="font-display text-2xl tracking-wider text-red-500">
+            {locale === 'fr' ? 'ZONE DANGER' : 'DANGER ZONE'}
           </h2>
-          <p className="text-white/40 text-sm tracking-wide">
-            {locale === 'fr'
-              ? "Tu es le créateur de cette ligue. Tu peux gérer les événements depuis la page Événements."
-              : "You created this league. Manage events and results from the Events page."}
-          </p>
+          {isOwner && (
+            <p className="text-white/40 text-sm">
+              {locale === 'fr'
+                ? "Tu es le créateur de cette ligue. Tu peux gérer les événements depuis la page Événements."
+                : "You created this league. Manage events and results from the Events page."}
+            </p>
+          )}
+          <DeleteLeagueButton
+            leagueId={params.id}
+            leagueName={league.name}
+            locale={locale}
+          />
         </div>
       )}
     </div>
