@@ -32,13 +32,10 @@ export async function POST(req: NextRequest) {
     if (!predictions?.length) continue
 
     for (const pred of predictions) {
-      const correctWinner = pred.predicted_winner === result.winner
-
-      // Comparaison stricte des valeurs exactes stockées en BDD
-      const correctMethod = pred.predicted_method === result.method
-
-      // Comparaison numérique stricte
-      const correctRound = Number(pred.predicted_round) === Number(result.round)
+      // Forcer la comparaison en string pour éviter les mismatches number/string
+      const correctWinner = String(pred.predicted_winner).trim() === String(result.winner).trim()
+      const correctMethod = String(pred.predicted_method).trim() === String(result.method).trim()
+      const correctRound  = Number(pred.predicted_round) === Number(result.round)
 
       let points = 0
       if (correctWinner) points += 10
@@ -51,23 +48,10 @@ export async function POST(req: NextRequest) {
       await db.from('predictions').update({ points_earned: points }).eq('id', pred.id)
       totalUpdated++
 
-      // Log détaillé pour débugger
       details.push({
         fight: `${fight.fighter1_name} vs ${fight.fighter2_name}`,
-        result_raw: {
-          winner: result.winner,
-          method: result.method,
-          round: result.round,
-          method_type: typeof result.method,
-          round_type: typeof result.round,
-        },
-        prediction_raw: {
-          winner: pred.predicted_winner,
-          method: pred.predicted_method,
-          round: pred.predicted_round,
-          method_type: typeof pred.predicted_method,
-          round_type: typeof pred.predicted_round,
-        },
+        result:     { winner: result.winner,         method: result.method,         round: result.round,         round_type: typeof result.round },
+        prediction: { winner: pred.predicted_winner, method: pred.predicted_method, round: pred.predicted_round, round_type: typeof pred.predicted_round },
         correct: { winner: correctWinner, method: correctMethod, round: correctRound },
         points,
       })
