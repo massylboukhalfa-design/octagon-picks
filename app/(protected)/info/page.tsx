@@ -24,6 +24,7 @@ export default function InfoPage() {
     { q: 'Que se passe-t-il si je rejoins une ligue après avoir déjà pronostiqué ?', a: 'Tous tes pronostics passés sont automatiquement associés à ta nouvelle ligue.' },
     { q: 'Puis-je voir les pronostics des autres ?', a: 'Oui, mais uniquement pour les événements terminés. Clique sur un joueur dans le classement pour voir son historique.' },
     { q: 'Quand les points sont-ils calculés ?', a: 'Les points sont calculés par l\'administrateur après chaque événement, une fois les résultats officiels saisis.' },
+    { q: 'Puis-je avoir un fighter dans plusieurs saisons draft ?', a: 'Oui, les saisons sont indépendantes. Un fighter peut être drafté dans différentes saisons draft de différentes ligues.' },
     { q: 'Que signifie NC ?', a: 'NC signifie "No Contest" — le combat est annulé ou déclaré nul pour des raisons réglementaires.' },
   ] : [
     { q: 'How long can I edit my prediction?', a: 'You can edit your prediction until the deadline shown on the event page. Once the deadline passes, picks are locked.' },
@@ -31,6 +32,7 @@ export default function InfoPage() {
     { q: 'What happens if I join a league after already making predictions?', a: 'All your past predictions are automatically linked to your new league.' },
     { q: 'Can I see other players\' predictions?', a: 'Yes, but only for completed events. Click a player\'s name in the standings to view their history.' },
     { q: 'When are points calculated?', a: 'Points are calculated by the admin after each event, once official results are entered.' },
+    { q: 'Can I have a fighter in multiple draft seasons?', a: 'Yes, seasons are independent. A fighter can be drafted in different draft seasons across different leagues.' },
     { q: 'What does NC mean?', a: '"No Contest" — the fight is cancelled or declared void for regulatory reasons (doping, accidental injury, etc.).' },
   ]
 
@@ -96,6 +98,88 @@ export default function InfoPage() {
                 <p><span className="text-white font-semibold">Draw</span> — The method is automatically set to "Decision" and no round is selected. If the result is indeed a draw, you earn round points automatically.</p>
               </>
             )}
+          </div>
+        </div>
+      </section>
+
+
+      {/* Draft Mode */}
+      <section className="card border-gold-500/20 space-y-6">
+        <div className="flex items-center gap-3">
+          <span className="text-3xl">🏆</span>
+          <h2 className="font-display text-3xl tracking-wider text-gold-400">DRAFT MODE</h2>
+        </div>
+        <p className="text-white/60 text-sm leading-relaxed">
+          {locale === 'fr'
+            ? "Le Draft Mode est un mode saison. L'owner d'une ligue crée une saison couvrant plusieurs events UFC, et chaque joueur constitue une équipe de fighters avant le début de la saison."
+            : "Draft Mode is a season-based game. The league owner creates a season covering several UFC events, and each player builds a team of fighters before the season starts."}
+        </p>
+
+        {/* Déroulement */}
+        <div className="space-y-3">
+          <h3 className="font-display text-xl tracking-wider text-white/60">
+            {locale === 'fr' ? 'DÉROULEMENT' : 'HOW IT WORKS'}
+          </h3>
+          <div className="space-y-2">
+            {(locale === 'fr' ? [
+              { step: '1', title: 'Création de la saison', desc: "L'owner choisit les events inclus, le nombre de rounds de draft et le délai par tour (ex: 24h)." },
+              { step: '2', title: 'Le draft', desc: "L'ordre de passage est tiré au sort. En snake order (1-2-3-3-2-1), chaque joueur choisit à son tour 1 fighter du main event + 2 fighters de l'undercard." },
+              { step: '3', title: 'La saison', desc: "Quand les résultats sont saisis, tes fighters te rapportent des points selon leurs performances réelles." },
+              { step: '4', title: 'Échanges', desc: "Pendant la saison, tu peux proposer des échanges de fighters avec d'autres joueurs, tant que leurs combats n'ont pas encore eu lieu." },
+            ] : [
+              { step: '1', title: 'Season creation', desc: 'The owner selects included events, number of draft rounds, and time per pick (e.g. 24h).' },
+              { step: '2', title: 'The draft', desc: 'Pick order is randomized. In snake order (1-2-3-3-2-1), each player picks 1 main event fighter + 2 undercard fighters per turn.' },
+              { step: '3', title: 'The season', desc: 'When results are entered, your fighters earn you points based on their real performance.' },
+              { step: '4', title: 'Trades', desc: "During the season, you can propose fighter swaps with other players, as long as their fights haven't happened yet." },
+            ]).map(({ step, title, desc }) => (
+              <div key={step} className="flex gap-4 p-3 bg-octagon-700 border border-octagon-600">
+                <div className="font-display text-2xl text-gold-400 flex-shrink-0 w-6 text-center">{step}</div>
+                <div>
+                  <div className="font-semibold text-sm">{title}</div>
+                  <div className="text-white/40 text-xs mt-1 leading-relaxed">{desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Barème draft */}
+        <div className="space-y-3">
+          <h3 className="font-display text-xl tracking-wider text-white/60">
+            {locale === 'fr' ? 'BARÈME DRAFT' : 'DRAFT SCORING'}
+          </h3>
+          <div className="grid grid-cols-2 gap-3">
+            {(locale === 'fr' ? [
+              { pts: '4 pts', label: 'KO / Submission', desc: 'Victoire par finition', color: 'text-blood-400' },
+              { pts: '3 pts', label: 'Décision unanime', desc: 'UD — les 3 juges d'accord', color: 'text-white' },
+              { pts: '2 pts', label: 'Décision partagée', desc: 'SD ou MD', color: 'text-gold-400' },
+              { pts: '×2', label: 'Main event', desc: 'Multiplicateur sur tous les points', color: 'text-gold-400' },
+            ] : [
+              { pts: '4 pts', label: 'KO / Submission', desc: 'Victory by finish', color: 'text-blood-400' },
+              { pts: '3 pts', label: 'Unanimous decision', desc: 'UD — all 3 judges agree', color: 'text-white' },
+              { pts: '2 pts', label: 'Split decision', desc: 'SD or MD', color: 'text-gold-400' },
+              { pts: '×2', label: 'Main event', desc: 'Multiplier on all points', color: 'text-gold-400' },
+            ]).map(item => (
+              <div key={item.label} className="bg-octagon-700 border border-octagon-600 p-4">
+                <div className={`font-display text-2xl mb-1 ${item.color}`}>{item.pts}</div>
+                <div className="font-semibold text-sm tracking-wide">{item.label}</div>
+                <div className="text-white/40 text-xs mt-1">{item.desc}</div>
+              </div>
+            ))}
+          </div>
+          <div className="bg-octagon-700 border border-octagon-600 p-4 space-y-2 text-sm text-white/50 leading-relaxed">
+            <p>
+              <span className="text-white font-semibold">{locale === 'fr' ? 'Clash direct' : 'Direct clash'}</span>
+              {locale === 'fr'
+                ? ' — quand ton fighter affronte le fighter d'un autre joueur de ta ligue, le gagnant marque les points du barème.'
+                : ' — when your fighter faces another player's fighter in your league, the winner scores the full points.'}
+            </p>
+            <p>
+              <span className="text-white font-semibold">{locale === 'fr' ? 'Victoire solo' : 'Lone win'}</span>
+              {locale === 'fr'
+                ? ' — si l'adversaire de ton fighter n'est drafté par personne, tu marques 1 point de base (×2 si main event).'
+                : ' — if your fighter's opponent isn't drafted by anyone, you earn 1 base point (×2 if main event).'}
+            </p>
           </div>
         </div>
       </section>

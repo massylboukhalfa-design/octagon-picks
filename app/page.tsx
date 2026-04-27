@@ -5,7 +5,7 @@ export default function HomePage() {
   const locale = getLocale()
   const fr = locale === 'fr'
 
-  const points = fr
+  const pronoPoints = fr
     ? [
         { pts: '+10', label: 'Bon gagnant', color: 'text-white' },
         { pts: '+5', label: 'Bonne méthode', color: 'text-gold-400' },
@@ -17,6 +17,20 @@ export default function HomePage() {
         { pts: '+5', label: 'Correct method', color: 'text-gold-400' },
         { pts: '+5', label: 'Correct round', color: 'text-gold-400' },
         { pts: '+10', label: 'Perfect combo', color: 'text-blood-400' },
+      ]
+
+  const draftPoints = fr
+    ? [
+        { pts: '4 pts', label: 'KO / Submission', color: 'text-blood-400' },
+        { pts: '3 pts', label: 'Décision unanime', color: 'text-white' },
+        { pts: '2 pts', label: 'Décision partagée', color: 'text-gold-400' },
+        { pts: '×2', label: 'Main event', color: 'text-gold-400' },
+      ]
+    : [
+        { pts: '4 pts', label: 'KO / Submission', color: 'text-blood-400' },
+        { pts: '3 pts', label: 'Unanimous decision', color: 'text-white' },
+        { pts: '2 pts', label: 'Split decision', color: 'text-gold-400' },
+        { pts: '×2', label: 'Main event', color: 'text-gold-400' },
       ]
 
   return (
@@ -43,6 +57,7 @@ export default function HomePage() {
         </div>
       </nav>
 
+      {/* Hero */}
       <section className="relative z-10 flex-1 flex flex-col items-center justify-center text-center px-8 py-24">
         <div className="inline-flex items-center gap-2 badge-red mb-8 animate-fade-in">
           <span className="w-1.5 h-1.5 bg-blood-400 rounded-full animate-pulse" />
@@ -64,11 +79,9 @@ export default function HomePage() {
         </h1>
 
         <p className="text-white/40 text-xl font-light tracking-wide max-w-xl mb-12 animate-fade-in animate-delay-200">
-          {fr ? (
-            <>Crée ta ligue, pronostique le gagnant, la méthode et le round.<br />Domine le classement de tes amis.</>
-          ) : (
-            <>Create your league, predict the winner, method and round.<br />Dominate your friends' leaderboard.</>
-          )}
+          {fr
+            ? 'Deux modes de jeu, une seule arène. Pronostique chaque combat ou constitue ton équipe de fighters.'
+            : 'Two game modes, one arena. Predict each fight or build your team of fighters.'}
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 animate-fade-in animate-delay-300">
@@ -79,39 +92,96 @@ export default function HomePage() {
             {fr ? "J'ai un compte" : 'I have an account'}
           </Link>
         </div>
+      </section>
 
-        <div className="grid grid-cols-3 gap-12 mt-24 animate-fade-in animate-delay-400">
-          {[
-            { value: '30', label: fr ? 'Points max par combat' : 'Max points per fight' },
-            { value: '3', label: fr ? 'Critères de pronostic' : 'Prediction criteria' },
-            { value: '∞', label: fr ? 'Ligues possibles' : 'Possible leagues' },
-          ].map(stat => (
-            <div key={stat.label} className="text-center">
-              <div className="font-display text-5xl text-blood-400">{stat.value}</div>
-              <div className="text-white/40 text-xs uppercase tracking-widest mt-1">{stat.label}</div>
+      {/* Deux modes */}
+      <section className="relative z-10 border-t border-octagon-800 px-8 py-20">
+        <div className="max-w-5xl mx-auto">
+          <h2 className="font-display text-3xl tracking-wider text-center mb-12 text-white/40">
+            {fr ? 'DEUX MODES DE JEU' : 'TWO GAME MODES'}
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            {/* Mode Prono */}
+            <div className="card border-blood-500/30 space-y-5">
+              <div className="flex items-center gap-3">
+                <span className="text-4xl">🎯</span>
+                <div>
+                  <div className="font-display text-2xl tracking-wider">
+                    {fr ? 'PRONOSTICS' : 'PREDICTIONS'}
+                  </div>
+                  <div className="text-blood-400 text-xs uppercase tracking-widest">
+                    {fr ? 'Event par event' : 'Event by event'}
+                  </div>
+                </div>
+              </div>
+              <p className="text-white/50 text-sm leading-relaxed">
+                {fr
+                  ? 'Pour chaque combat, pronostique le vainqueur, la méthode et le round. Les points s\'accumulent au fil des events dans le classement de ta ligue.'
+                  : 'For each fight, predict the winner, method and round. Points accumulate across events in your league standings.'}
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {pronoPoints.map(item => (
+                  <div key={item.label} className="bg-octagon-700 p-3 text-center">
+                    <div className={`font-display text-2xl ${item.color}`}>{item.pts}</div>
+                    <div className="text-white/40 text-xs mt-1">{item.label}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="text-white/30 text-xs text-center">
+                {fr ? 'Max 30 pts par combat' : 'Max 30 pts per fight'}
+              </div>
             </div>
-          ))}
+
+            {/* Mode Draft */}
+            <div className="card border-gold-500/30 space-y-5">
+              <div className="flex items-center gap-3">
+                <span className="text-4xl">🏆</span>
+                <div>
+                  <div className="font-display text-2xl tracking-wider">DRAFT</div>
+                  <div className="text-gold-400 text-xs uppercase tracking-widest">
+                    {fr ? 'Mode saison' : 'Season mode'}
+                  </div>
+                </div>
+              </div>
+              <p className="text-white/50 text-sm leading-relaxed">
+                {fr
+                  ? 'Avant la saison, chaque joueur draft une équipe de fighters. Tu marques des points quand tes fighters gagnent — surtout quand ton fighter affronte celui d\'un autre joueur.'
+                  : 'Before the season, each player drafts a team of fighters. You score points when your fighters win — especially when your fighter faces another player\'s.'}
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {draftPoints.map(item => (
+                  <div key={item.label} className="bg-octagon-700 p-3 text-center">
+                    <div className={`font-display text-2xl ${item.color}`}>{item.pts}</div>
+                    <div className="text-white/40 text-xs mt-1">{item.label}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-1 text-xs text-white/30">
+                <div>{fr ? '🐍 Snake order asynchrone' : '🐍 Async snake draft order'}</div>
+                <div>{fr ? '⇄ Échanges entre joueurs possibles' : '⇄ Trades between players allowed'}</div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
-      <section className="relative z-10 border-t border-octagon-800 px-8 py-16">
+      {/* Stats */}
+      <section className="relative z-10 border-t border-octagon-800 px-8 py-12">
         <div className="max-w-4xl mx-auto">
-          <h2 className="font-display text-3xl tracking-wider text-center mb-12 text-white/40">
-            {fr ? 'SYSTÈME DE POINTS' : 'SCORING SYSTEM'}
-          </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {points.map(item => (
-              <div key={item.label} className="card text-center">
-                <div className={`font-display text-4xl ${item.color}`}>{item.pts}</div>
-                <div className="text-white/40 text-xs uppercase tracking-widest mt-2">{item.label}</div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            {[
+              { value: '2', label: fr ? 'Modes de jeu' : 'Game modes' },
+              { value: '30', label: fr ? 'Pts max / combat' : 'Max pts / fight' },
+              { value: '∞', label: fr ? 'Ligues possibles' : 'Possible leagues' },
+              { value: '🔒', label: fr ? 'Cercle privé' : 'Private circle' },
+            ].map(stat => (
+              <div key={stat.label} className="text-center">
+                <div className="font-display text-5xl text-blood-400">{stat.value}</div>
+                <div className="text-white/40 text-xs uppercase tracking-widest mt-2">{stat.label}</div>
               </div>
             ))}
           </div>
-          <p className="text-center text-white/40 text-sm mt-6">
-            {fr ? 'Max ' : 'Max '}
-            <span className="text-gold-400 font-semibold">30 pts</span>
-            {fr ? ' par combat avec le combo parfait' : ' per fight with a perfect combo'}
-          </p>
         </div>
       </section>
     </main>
