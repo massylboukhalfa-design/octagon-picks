@@ -26,8 +26,16 @@ export default function ResultsForm({ eventId, fights, locale = 'fr' }: { eventI
   const [loading, setLoading] = useState(false)
   const [saved, setSaved] = useState(false)
 
-  const update = (fightId: string, field: keyof FightResult, value: any) => {
-    setResults(prev => ({ ...prev, [fightId]: { ...prev[fightId], [field]: value } }))
+  const update = (fightId: string, field: keyof FightResult, value: any, scheduledRounds?: number) => {
+    setResults(prev => {
+      const current = prev[fightId]
+      const updated = { ...current, [field]: value }
+      // Si la méthode passe à Decision, auto-set le round au max du combat
+      if (field === 'method' && value === 'Decision' && scheduledRounds) {
+        updated.round = scheduledRounds
+      }
+      return { ...prev, [fightId]: updated }
+    })
   }
 
   const handleSave = async () => {
@@ -38,15 +46,14 @@ export default function ResultsForm({ eventId, fights, locale = 'fr' }: { eventI
       const r = results[fight.id]
       if (!r.winner || !r.method || !r.round) continue
 
-      if (fight.fight_results?.[0]) {
-        await supabase.from('fight_results').update({
-          winner: r.winner, method: r.method, round: r.round, time: r.time || null
-        }).eq('id', fight.fight_results[0].id)
-      } else {
-        await supabase.from('fight_results').insert({
-          fight_id: fight.id, winner: r.winner, method: r.method, round: r.round, time: r.time || null
-        })
-      }
+      // Upsert sur fight_id — fonctionne que le résultat existe ou non
+      await supabase.from('fight_results').upsert({
+        fight_id: fight.id,
+        winner: r.winner,
+        method: r.method,
+        round: r.round,
+        time: r.time || null,
+      }, { onConflict: 'fight_id' })
     }
 
     await supabase.from('ufc_events').update({ status: 'completed' }).eq('id', eventId)
@@ -102,7 +109,7 @@ export default function ResultsForm({ eventId, fights, locale = 'fr' }: { eventI
                   <div className="flex flex-wrap gap-2">
                     {FIGHT_METHODS.map(m => (
                       <button key={m} type="button"
-                        onClick={() => update(fight.id, 'method', m)}
+                        onClick={() => update(fight.id, 'method', m, fight.scheduled_rounds)}
                         className={`py-1 px-2 border text-xs font-mono transition-all ${
                           r.method === m ? 'border-gold-500 text-gold-400 bg-yellow-950/30' : 'border-octagon-600 text-white/40 hover:text-white'
                         }`}>
@@ -115,17 +122,25 @@ export default function ResultsForm({ eventId, fights, locale = 'fr' }: { eventI
                 {/* Round */}
                 <div>
                   <label className="label">Round</label>
-                  <div className="flex gap-2">
-                    {rounds.map(rnd => (
-                      <button key={rnd} type="button"
-                        onClick={() => update(fight.id, 'round', rnd)}
-                        className={`w-9 h-9 border font-display text-lg transition-all ${
-                          r.round === rnd ? 'border-blood-500 bg-blood-500/10 text-white' : 'border-octagon-600 text-white/40 hover:text-white'
-                        }`}>
-                        {rnd}
-                      </button>
-                    ))}
-                  </div>
+                  {r.method === 'Decision' ? (
+                    <div className="px-3 py-2 bg-octagon-700 border border-octagon-600 inline-flex items-center gap-2">
+                      <span className="text-white/60 text-sm font-mono">
+                        R{fight.scheduled_rounds} — automatique (décision)
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      {rounds.map(rnd => (
+                        <button key={rnd} type="button"
+                          onClick={() => update(fight.id, 'round', rnd)}
+                          className={`w-9 h-9 border font-display text-lg transition-all ${
+                            r.round === rnd ? 'border-blood-500 bg-blood-500/10 text-white' : 'border-octagon-600 text-white/40 hover:text-white'
+                          }`}>
+                          {rnd}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
