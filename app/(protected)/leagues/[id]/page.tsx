@@ -51,11 +51,20 @@ export default async function LeagueDetailPage({ params }: { params: { id: strin
           </div>
           <h1 className="font-display text-5xl tracking-wider">{league.name}</h1>
           {league.description && <p className="text-white/50 mt-2 tracking-wide">{league.description}</p>}
-          <div className="mt-3">
-            <Link href={`/leagues/${params.id}/draft`}
-              className="inline-flex items-center gap-2 text-xs uppercase tracking-widest font-semibold text-gold-400 hover:text-gold-300 border border-gold-500/30 hover:border-gold-500/60 px-3 py-1.5 transition-all">
-              🏆 {locale === 'fr' ? 'Draft Mode' : 'Draft Mode'}
-            </Link>
+          <div className="mt-3 flex items-center gap-2">
+            <span className={`text-xs px-2 py-1 border font-semibold ${
+              league.mode === 'draft'
+                ? 'border-gold-500/50 text-gold-400'
+                : 'border-blood-500/50 text-blood-400'
+            }`}>
+              {league.mode === 'draft' ? '🏆 Draft' : ('🎯 ' + (locale === 'fr' ? 'Pronostics' : 'Predictions'))}
+            </span>
+            {league.mode === 'draft' && (
+              <Link href={`/leagues/${params.id}/draft`}
+                className="inline-flex items-center gap-2 text-xs uppercase tracking-widest font-semibold text-gold-400 hover:text-gold-300 border border-gold-500/30 hover:border-gold-500/60 px-3 py-1.5 transition-all">
+                {locale === 'fr' ? 'Gérer les saisons →' : 'Manage seasons →'}
+              </Link>
+            )}
           </div>
         </div>
         <div className="text-right">
